@@ -19,6 +19,7 @@ const FONT_BOLD := preload("res://assets/fonts/PixelifySans-Bold.ttf")
 const DESIGN_WIDTH := 720.0
 const BASE_DESIGN_HEIGHT := 1565.373
 const DRAGON_FOOT_ANCHOR := Vector2(105.0, 218.0)
+const GROOM_CLEAN_PER_PIXEL := 0.018
 
 var screen_layer: Control
 var canvas_size := Vector2(DESIGN_WIDTH, BASE_DESIGN_HEIGHT)
@@ -68,7 +69,7 @@ var walking := false
 var grooming := false
 var bob_time := 0.0
 var hunger := 42
-var cleanliness := 28
+var cleanliness := 28.0
 var care_points := 18
 var random := RandomNumberGenerator.new()
 
@@ -586,7 +587,7 @@ func _show_habitat() -> void:
 	clean_title.position = Vector2(26, 145)
 	clean_title.size = Vector2(140, 30)
 	bottom.add_child(clean_title)
-	clean_label = _label("%d%%" % cleanliness, 21, INK, HORIZONTAL_ALIGNMENT_RIGHT, FONT_BOLD)
+	clean_label = _label("%d%%" % floori(cleanliness), 21, INK, HORIZONTAL_ALIGNMENT_RIGHT, FONT_BOLD)
 	clean_label.position = Vector2(542, 145)
 	clean_label.size = Vector2(96, 30)
 	bottom.add_child(clean_label)
@@ -665,7 +666,7 @@ func _show_grooming() -> void:
 	clean_title.position = Vector2(22, 14)
 	clean_title.size = Vector2(180, 34)
 	progress_panel.add_child(clean_title)
-	clean_label = _label("%d%%" % cleanliness, 25, PINK_DARK, HORIZONTAL_ALIGNMENT_RIGHT, FONT_BOLD)
+	clean_label = _label("%d%%" % floori(cleanliness), 25, PINK_DARK, HORIZONTAL_ALIGNMENT_RIGHT, FONT_BOLD)
 	clean_label.position = Vector2(490, 14)
 	clean_label.size = Vector2(120, 34)
 	progress_panel.add_child(clean_label)
@@ -772,8 +773,8 @@ func _groom_at(local_position: Vector2, drag_delta: Vector2) -> void:
 			groom_rotation_target = 0.0
 			return
 		var previous_cleanliness := cleanliness
-		cleanliness = mini(100, cleanliness + ceili(drag_delta.length() * 0.055))
-		if cleanliness != previous_cleanliness:
+		cleanliness = minf(100.0, cleanliness + drag_delta.length() * GROOM_CLEAN_PER_PIXEL)
+		if floori(cleanliness) != floori(previous_cleanliness):
 			_update_clean_display()
 			_spawn_groom_sparkle(groom_area.position + local_position)
 		_update_continuous_stretch(drag_delta)
@@ -819,7 +820,7 @@ func _update_clean_display() -> void:
 	if is_instance_valid(clean_bar):
 		clean_bar.value = cleanliness
 	if is_instance_valid(clean_label):
-		clean_label.text = "%d%%" % cleanliness
+		clean_label.text = "%d%%" % floori(cleanliness)
 	if is_instance_valid(groom_complete_label):
 		groom_complete_label.visible = cleanliness >= 100
 
@@ -1312,7 +1313,7 @@ func debug_groom_stroke() -> void:
 		_show_grooming()
 	grooming = true
 	groom_drag_accumulator = Vector2.ZERO
-	for index in 40:
+	for index in 80:
 		var point := groom_sprite.position - groom_area.position + Vector2(240 + (index % 4) * 22, groom_sprite.size.y * 0.54 + (index % 3) * 12)
 		_groom_at(point, Vector2(58, 12))
 
