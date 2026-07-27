@@ -65,6 +65,7 @@ var dragged_accessory_kind := ""
 var accessory_drag_offset := Vector2.ZERO
 var accessory_z_counter := 100
 var competition_result_overlay: Control
+var competition_result_tween: Tween
 var walking := false
 var grooming := false
 var bob_time := 0.0
@@ -171,6 +172,85 @@ class PixelComb:
 			draw_rect(Rect2(tooth_x, 32, 6, 30), Color("#2f2140"))
 			draw_rect(Rect2(tooth_x + 1, 32, 4, 25), Color("#f45b9d"))
 		draw_rect(Rect2(13, 38, 8, 5), Color("#ffffff"))
+
+
+class PixelStar:
+	extends Control
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pivot_offset = size / 2.0
+		queue_redraw()
+
+	func _draw() -> void:
+		var center := size / 2.0
+		var outer := _star_points(center, minf(size.x, size.y) * 0.48)
+		var inner := _star_points(center, minf(size.x, size.y) * 0.35)
+		draw_colored_polygon(outer, Color("#2f2140"))
+		draw_colored_polygon(inner, Color("#ffc857"))
+		draw_circle(center + Vector2(-8, -9), 4.0, Color("#fff1c9"))
+
+	func _star_points(center: Vector2, radius: float) -> PackedVector2Array:
+		var points := PackedVector2Array()
+		for index in 10:
+			var point_radius := radius if index % 2 == 0 else radius * 0.45
+			var angle := -PI / 2.0 + float(index) * PI / 5.0
+			points.append(center + Vector2(cos(angle), sin(angle)) * point_radius)
+		return points
+
+
+class PixelScore:
+	extends Control
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pivot_offset = size / 2.0
+		queue_redraw()
+
+	func _draw() -> void:
+		_draw_five(Vector2(20, 5))
+		for block_index in 4:
+			draw_rect(Rect2(101 - block_index * 9, 12 + block_index * 13, 10, 14), Color("#2f2140"))
+		_draw_five(Vector2(144, 5))
+
+	func _draw_five(origin: Vector2) -> void:
+		var thickness := 10.0
+		var digit_width := 50.0
+		var digit_height := 64.0
+		draw_rect(Rect2(origin, Vector2(digit_width, thickness)), Color("#2f2140"))
+		draw_rect(Rect2(origin, Vector2(thickness, digit_height * 0.52)), Color("#2f2140"))
+		draw_rect(Rect2(origin + Vector2(0, 27), Vector2(digit_width, thickness)), Color("#2f2140"))
+		draw_rect(Rect2(origin + Vector2(digit_width - thickness, 27), Vector2(thickness, digit_height - 27)), Color("#2f2140"))
+		draw_rect(Rect2(origin + Vector2(0, digit_height - thickness), Vector2(digit_width, thickness)), Color("#2f2140"))
+		draw_rect(Rect2(origin + Vector2(10, 10), Vector2(18, 5)), Color("#f45b9d"))
+
+
+class ConfettiPiece:
+	extends Control
+
+	var velocity := Vector2.ZERO
+	var spin := 0.0
+	var lifetime := 1.35
+	var piece_color := Color.WHITE
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pivot_offset = size / 2.0
+		queue_redraw()
+
+	func _process(delta: float) -> void:
+		position += velocity * delta
+		velocity.y += 720.0 * delta
+		rotation += spin * delta
+		lifetime -= delta
+		if lifetime < 0.28:
+			modulate.a = maxf(0.0, lifetime / 0.28)
+		if lifetime <= 0.0:
+			queue_free()
+
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2.ZERO, size), Color("#2f2140"))
+		draw_rect(Rect2(3, 3, maxf(1.0, size.x - 6), maxf(1.0, size.y - 6)), piece_color)
 
 
 class AccessoryArt:
@@ -326,6 +406,9 @@ func _clear_screen() -> void:
 	accessory_drag_offset = Vector2.ZERO
 	accessory_z_counter = 100
 	competition_result_overlay = null
+	if competition_result_tween != null and competition_result_tween.is_valid():
+		competition_result_tween.kill()
+	competition_result_tween = null
 
 
 func _show_main_menu() -> void:
@@ -1090,15 +1173,20 @@ func _judge_competition() -> void:
 	perfect.position = Vector2(20, 100)
 	perfect.size = Vector2(560, 64)
 	result_panel.add_child(perfect)
-	var stars := _label("★★★★★", 57, GOLD, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	stars.position = Vector2(20, 176)
-	stars.size = Vector2(560, 82)
-	stars.add_theme_color_override("font_outline_color", INK)
-	stars.add_theme_constant_override("outline_size", 5)
-	result_panel.add_child(stars)
-	var score := _label("5 / 5", 47, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	score.position = Vector2(20, 256)
-	score.size = Vector2(560, 68)
+	var score_stars: Array[Control] = []
+	for star_index in 5:
+		var star := PixelStar.new()
+		star.position = Vector2(96 + star_index * 84, 178)
+		star.size = Vector2(72, 72)
+		star.scale = Vector2.ONE * 0.08
+		star.modulate.a = 0.0
+		result_panel.add_child(star)
+		score_stars.append(star)
+	var score := PixelScore.new()
+	score.position = Vector2(190, 258)
+	score.size = Vector2(220, 74)
+	score.scale = Vector2.ONE * 0.82
+	score.modulate.a = 0.0
 	result_panel.add_child(score)
 	var comment := _label(_t("JUDGE_COMMENT"), 24, INK_SOFT, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
 	comment.position = Vector2(58, 330)
@@ -1108,9 +1196,50 @@ func _judge_competition() -> void:
 	var continue_button := _button(_t("CONTINUE"), Rect2(80, 460, 440, 96), PINK, PINK_DARK)
 	continue_button.pressed.connect(_close_competition_result)
 	result_panel.add_child(continue_button)
+	_animate_competition_score(score_stars, score, result_panel.position + Vector2(300, 220))
+
+
+func _animate_competition_score(stars: Array[Control], score: Control, confetti_origin: Vector2) -> void:
+	competition_result_tween = create_tween()
+	competition_result_tween.tween_interval(0.18)
+	for star in stars:
+		competition_result_tween.tween_callback(_reveal_score_star.bind(star))
+		competition_result_tween.tween_property(star, "scale", Vector2.ONE, 0.20).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		competition_result_tween.tween_interval(0.08)
+	competition_result_tween.tween_callback(_burst_score_confetti.bind(confetti_origin))
+	competition_result_tween.tween_callback(_reveal_score_display.bind(score))
+	competition_result_tween.tween_property(score, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _reveal_score_star(star: Control) -> void:
+	if is_instance_valid(star):
+		star.modulate.a = 1.0
+
+
+func _reveal_score_display(score: Control) -> void:
+	if is_instance_valid(score):
+		score.modulate.a = 1.0
+
+
+func _burst_score_confetti(origin: Vector2) -> void:
+	if not is_instance_valid(competition_result_overlay):
+		return
+	var confetti_colors := [PINK, GOLD, MINT, SKY, Color("#9b7ede"), CREAM]
+	for piece_index in 34:
+		var piece := ConfettiPiece.new()
+		piece.position = origin + Vector2(random.randf_range(-18.0, 18.0), random.randf_range(-8.0, 8.0))
+		piece.size = Vector2(random.randi_range(10, 17), random.randi_range(16, 27))
+		piece.velocity = Vector2(random.randf_range(-330.0, 330.0), random.randf_range(-570.0, -280.0))
+		piece.spin = random.randf_range(-9.0, 9.0)
+		piece.piece_color = confetti_colors[piece_index % confetti_colors.size()]
+		piece.z_index = 30
+		competition_result_overlay.add_child(piece)
 
 
 func _close_competition_result() -> void:
+	if competition_result_tween != null and competition_result_tween.is_valid():
+		competition_result_tween.kill()
+	competition_result_tween = null
 	if is_instance_valid(competition_result_overlay):
 		competition_result_overlay.queue_free()
 	competition_result_overlay = null
