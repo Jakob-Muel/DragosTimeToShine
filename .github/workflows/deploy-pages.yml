@@ -1,0 +1,94 @@
+name: Deploy PWA to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.6.1-stable
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v4
+
+      - name: Cache Godot and export templates
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/dragos-godot
+            ~/.local/share/godot/export_templates/4.6.1.stable
+          key: godot-${{ runner.os }}-${{ env.GODOT_VERSION }}
+
+      - name: Download Godot 4.6.1
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.cache/dragos-godot"
+          curl --fail --location --retry 3 \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip" \
+            --output /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d "$HOME/.cache/dragos-godot"
+          mv "$HOME/.cache/dragos-godot/Godot_v${GODOT_VERSION}_linux.x86_64" \
+            "$HOME/.cache/dragos-godot/godot"
+          chmod +x "$HOME/.cache/dragos-godot/godot"
+
+          curl --fail --location --retry 3 \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz" \
+            --output /tmp/export_templates.tpz
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.6.1.stable"
+          unzip -jq /tmp/export_templates.tpz \
+            templates/version.txt \
+            templates/web_nothreads_debug.zip \
+            templates/web_nothreads_release.zip \
+            -d "$HOME/.local/share/godot/export_templates/4.6.1.stable"
+
+      - name: Import project
+        run: |
+          "$HOME/.cache/dragos-godot/godot" \
+            --headless --editor --path . --quit-after 10
+
+      - name: Export installable web app
+        run: |
+          mkdir -p build/web
+          "$HOME/.cache/dragos-godot/godot" \
+            --headless --path . \
+            --export-release "Web PWA" build/web/index.html
+          touch build/web/.nojekyll
+          test -f build/web/index.html
+          test -n "$(find build/web -maxdepth 1 -name '*.wasm' -print -quit)"
+          test -n "$(find build/web -maxdepth 1 -name '*.service.worker.js' -print -quit)"
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload PWA
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/web
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Publish GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

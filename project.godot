@@ -1,0 +1,40 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Drago’s Time to Shine"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.6", "GL Compatibility")
+boot_splash/bg_color=Color(0.121569, 0.0901961, 0.180392, 1)
+boot_splash/stretch_mode=0
+boot_splash/image="res://assets/art/dragon_source.png"
+config/icon="res://assets/art/dragon_source.png"
+
+[autoload]
+
+Localization="*res://scripts/localization.gd"
+
+[display]
+
+window/size/viewport_width=720
+window/size/viewport_height=1565
+window/size/window_width_override=393
+window/size/window_height_override=852
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=1
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.65098, 0.913725, 0.988235, 1)
