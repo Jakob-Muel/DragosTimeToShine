@@ -1,4 +1,26 @@
+# Godot
 .godot/
+
+# macOS
 .DS_Store
+
+# Generated exports
 build/
 
+# Accidental root-level iOS exports
+/*.ipa
+/*.pck
+/*.xcarchive/
+/DragosTimeToShine/
+/DragosTimeToShine.xcodeproj/
+/DragosTimeToShine.xcframework/
+/MoltenVK.xcframework/
+/libgodot.*.xcframework/
+/DistributionSummary.plist
+/ExportOptions.plist
+/Packaging.log
+/PrivacyInfo.xcprivacy
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
