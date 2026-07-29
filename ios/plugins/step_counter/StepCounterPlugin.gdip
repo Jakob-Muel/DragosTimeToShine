@@ -1,0 +1,17 @@
+[config]
+name="StepCounterPlugin"
+binary="StepCounterPlugin.xcframework"
+
+initialization="register_step_counter_types"
+deinitialization="unregister_step_counter_types"
+
+[dependencies]
+linked=[]
+embedded=[]
+system=["HealthKit.framework"]
+capabilities=[]
+files=[]
+linker_flags=["-ObjC"]
+
+[plist]
+NSHealthShareUsageDescription:string="Your steps incubate dragon eggs. Drago's stores only the total progress, never individual Health samples."

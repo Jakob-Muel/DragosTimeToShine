@@ -23,6 +23,9 @@ func _capture() -> void:
 	var output := "res://docs/screenshots/%s%s.png" % [screen_name, output_suffix]
 	var display_screen := screen_name
 	var capture_locale := ""
+	var game_state := root.get_node_or_null("GameState")
+	if game_state != null:
+		game_state.reset_for_tests()
 	if screen_name.ends_with("_de"):
 		display_screen = screen_name.trim_suffix("_de")
 		capture_locale = "de"

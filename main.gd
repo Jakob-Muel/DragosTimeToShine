@@ -13,13 +13,20 @@ const GOLD := Color("#ffc857")
 
 const DRAGON_TEXTURE := preload("res://assets/art/dragon_pink_hd.png")
 const ISLAND_TEXTURE := preload("res://assets/art/dragon_island_hd.png")
+const ICE_DRAGON_TEXTURE := preload("res://assets/art/ice/ice_dragon_hd.png")
+const ICE_EGG_TEXTURE := preload("res://assets/art/ice/ice_egg.png")
+const ICE_ISLAND_TEXTURE := preload("res://assets/art/ice/ice_island_hd.png")
 const FONT_REGULAR := preload("res://assets/fonts/PixelifySans-Regular.ttf")
 const FONT_BOLD := preload("res://assets/fonts/PixelifySans-Bold.ttf")
+const BUILD_INFO := preload("res://scripts/build_info.gd")
+const PIXEL_ART := preload("res://scripts/ui/pixel_art.gd")
+const FLIGHT_GAME := preload("res://scripts/ui/flight_game.gd")
+const FLIGHT_DRAGON_TEXTURE := preload("res://assets/art/flight/flight_dragon.png")
 
 const DESIGN_WIDTH := 720.0
 const BASE_DESIGN_HEIGHT := 1565.373
 const DRAGON_FOOT_ANCHOR := Vector2(105.0, 218.0)
-const GROOM_CLEAN_PER_PIXEL := 0.018
+const GROOM_CLEAN_PER_PIXEL := 0.008
 
 var screen_layer: Control
 var canvas_size := Vector2(DESIGN_WIDTH, BASE_DESIGN_HEIGHT)
@@ -28,7 +35,7 @@ var layout_rebuild_queued := false
 var current_screen := "main"
 var dragon_actor: Control
 var dragon_sprite: TextureRect
-var dragon_shadow: BlobShadow
+var dragon_shadow: Control
 var feed_button: Button
 var hunger_bar: ProgressBar
 var hunger_label: Label
@@ -38,12 +45,15 @@ var care_label: Label
 var groom_button: Button
 var groom_area: Control
 var groom_sprite: TextureRect
-var groom_comb: PixelComb
+var groom_comb: Control
 var groom_complete_label: Label
 var dragon_alpha_image: Image
+var active_dragon_texture: Texture2D = DRAGON_TEXTURE
 var groom_stretch_target := Vector2.ONE
 var groom_rotation_target := 0.0
 var groom_drag_accumulator := Vector2.ZERO
+var groom_completion_started := false
+var groom_completion_tween: Tween
 var selected_accessories := {
 	"hat": false,
 	"sword": false,
@@ -66,247 +76,32 @@ var accessory_drag_offset := Vector2.ZERO
 var accessory_z_counter := 100
 var competition_result_overlay: Control
 var competition_result_tween: Tween
+var flight_score_label: Label
+var flight_distance_label: Label
+var flight_contest_tween: Tween
+var flight_run_start_level := 0
+var current_egg_id := ""
+var step_error_message := ""
+var selected_dragon_id := "luma"
 var walking := false
 var grooming := false
 var bob_time := 0.0
-var hunger := 42
-var cleanliness := 28.0
-var care_points := 18
+var hunger: int:
+	get:
+		return GameState.hunger
+	set(value):
+		GameState.hunger = clampi(value, 0, 100)
+var cleanliness: float:
+	get:
+		return GameState.cleanliness
+	set(value):
+		GameState.cleanliness = clampf(value, 0.0, 100.0)
+var care_points: int:
+	get:
+		return GameState.care_points
+	set(value):
+		GameState.care_points = maxi(0, value)
 var random := RandomNumberGenerator.new()
-
-
-class PixelSky:
-	extends Control
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		queue_redraw()
-
-	func _draw() -> void:
-		draw_rect(Rect2(Vector2.ZERO, size), Color("#75d8f2"))
-		draw_rect(Rect2(0, size.y * 0.69, size.x, size.y * 0.31), Color("#b7e888"))
-		draw_rect(Rect2(0, size.y * 0.69, size.x, 8), Color("#2f2140"))
-		_draw_cloud(Vector2(52, 172), 1.0)
-		_draw_cloud(Vector2(485, 260), 0.8)
-		_draw_cloud(Vector2(115, 510), 0.55)
-		for x in range(24, int(size.x), 64):
-			var y := int(size.y * 0.73) + (x * 17) % 205
-			draw_rect(Rect2(x, y, 8, 18), Color("#65bb65"))
-			draw_rect(Rect2(x - 4, y + 7, 4, 5), Color("#65bb65"))
-			draw_rect(Rect2(x + 8, y + 4, 4, 5), Color("#65bb65"))
-
-	func _draw_cloud(origin: Vector2, scale_factor: float) -> void:
-		var blocks := [
-			Rect2(30, 0, 90, 32),
-			Rect2(0, 28, 166, 42),
-			Rect2(22, 62, 120, 18),
-		]
-		for block in blocks:
-			var scaled := Rect2(origin + block.position * scale_factor, block.size * scale_factor)
-			draw_rect(scaled, Color("#fff1c9"))
-			draw_rect(Rect2(scaled.position + Vector2(0, scaled.size.y - 6), Vector2(scaled.size.x, 6)), Color("#efcf9c"))
-
-
-class BlobShadow:
-	extends Control
-
-	var squish := 1.0:
-		set(value):
-			squish = value
-			queue_redraw()
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		queue_redraw()
-
-	func _draw() -> void:
-		var points := PackedVector2Array()
-		var center := size / 2.0
-		for index in 32:
-			var angle := TAU * float(index) / 32.0
-			points.append(center + Vector2(cos(angle) * size.x * 0.46, sin(angle) * size.y * 0.38 * squish))
-		draw_colored_polygon(points, Color(0.16, 0.10, 0.20, 0.28))
-
-
-class BerryPickup:
-	extends Control
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pivot_offset = size / 2.0
-		queue_redraw()
-
-	func _draw() -> void:
-		var pixel := 6.0
-		var berry := [
-			Vector2i(3, 2), Vector2i(4, 2),
-			Vector2i(2, 3), Vector2i(3, 3), Vector2i(4, 3), Vector2i(5, 3),
-			Vector2i(1, 4), Vector2i(2, 4), Vector2i(3, 4), Vector2i(4, 4), Vector2i(5, 4), Vector2i(6, 4),
-			Vector2i(1, 5), Vector2i(2, 5), Vector2i(3, 5), Vector2i(4, 5), Vector2i(5, 5), Vector2i(6, 5),
-			Vector2i(2, 6), Vector2i(3, 6), Vector2i(4, 6), Vector2i(5, 6),
-			Vector2i(3, 7), Vector2i(4, 7),
-		]
-		for cell in berry:
-			draw_rect(Rect2(Vector2(cell) * pixel + Vector2(7, 5), Vector2(pixel, pixel)), Color("#e63e78"))
-		draw_rect(Rect2(25, 11, 6, 12), Color("#49334f"))
-		draw_rect(Rect2(31, 5, 12, 6), Color("#49a85b"))
-		draw_rect(Rect2(37, 11, 12, 6), Color("#49a85b"))
-		draw_rect(Rect2(19, 29, 6, 6), Color("#ff8cba"))
-		draw_rect(Rect2(0, 54, 62, 7), Color(0.16, 0.10, 0.20, 0.22))
-
-
-class PixelComb:
-	extends Control
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pivot_offset = size / 2.0
-		queue_redraw()
-
-	func _draw() -> void:
-		draw_rect(Rect2(5, 31, 55, 22), Color("#2f2140"))
-		draw_rect(Rect2(9, 35, 51, 14), Color("#fff1c9"))
-		draw_rect(Rect2(54, 18, 34, 18), Color("#2f2140"))
-		draw_rect(Rect2(58, 22, 26, 10), Color("#f45b9d"))
-		for tooth_x in range(58, 86, 7):
-			draw_rect(Rect2(tooth_x, 32, 6, 30), Color("#2f2140"))
-			draw_rect(Rect2(tooth_x + 1, 32, 4, 25), Color("#f45b9d"))
-		draw_rect(Rect2(13, 38, 8, 5), Color("#ffffff"))
-
-
-class PixelStar:
-	extends Control
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pivot_offset = size / 2.0
-		queue_redraw()
-
-	func _draw() -> void:
-		var center := size / 2.0
-		var outer := _star_points(center, minf(size.x, size.y) * 0.48)
-		var inner := _star_points(center, minf(size.x, size.y) * 0.35)
-		draw_colored_polygon(outer, Color("#2f2140"))
-		draw_colored_polygon(inner, Color("#ffc857"))
-		draw_circle(center + Vector2(-8, -9), 4.0, Color("#fff1c9"))
-
-	func _star_points(center: Vector2, radius: float) -> PackedVector2Array:
-		var points := PackedVector2Array()
-		for index in 10:
-			var point_radius := radius if index % 2 == 0 else radius * 0.45
-			var angle := -PI / 2.0 + float(index) * PI / 5.0
-			points.append(center + Vector2(cos(angle), sin(angle)) * point_radius)
-		return points
-
-
-class PixelScore:
-	extends Control
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pivot_offset = size / 2.0
-		queue_redraw()
-
-	func _draw() -> void:
-		_draw_five(Vector2(20, 5))
-		for block_index in 4:
-			draw_rect(Rect2(101 - block_index * 9, 12 + block_index * 13, 10, 14), Color("#2f2140"))
-		_draw_five(Vector2(144, 5))
-
-	func _draw_five(origin: Vector2) -> void:
-		var thickness := 10.0
-		var digit_width := 50.0
-		var digit_height := 64.0
-		draw_rect(Rect2(origin, Vector2(digit_width, thickness)), Color("#2f2140"))
-		draw_rect(Rect2(origin, Vector2(thickness, digit_height * 0.52)), Color("#2f2140"))
-		draw_rect(Rect2(origin + Vector2(0, 27), Vector2(digit_width, thickness)), Color("#2f2140"))
-		draw_rect(Rect2(origin + Vector2(digit_width - thickness, 27), Vector2(thickness, digit_height - 27)), Color("#2f2140"))
-		draw_rect(Rect2(origin + Vector2(0, digit_height - thickness), Vector2(digit_width, thickness)), Color("#2f2140"))
-		draw_rect(Rect2(origin + Vector2(10, 10), Vector2(18, 5)), Color("#f45b9d"))
-
-
-class ConfettiPiece:
-	extends Control
-
-	var velocity := Vector2.ZERO
-	var spin := 0.0
-	var lifetime := 1.35
-	var piece_color := Color.WHITE
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pivot_offset = size / 2.0
-		queue_redraw()
-
-	func _process(delta: float) -> void:
-		position += velocity * delta
-		velocity.y += 720.0 * delta
-		rotation += spin * delta
-		lifetime -= delta
-		if lifetime < 0.28:
-			modulate.a = maxf(0.0, lifetime / 0.28)
-		if lifetime <= 0.0:
-			queue_free()
-
-	func _draw() -> void:
-		draw_rect(Rect2(Vector2.ZERO, size), Color("#2f2140"))
-		draw_rect(Rect2(3, 3, maxf(1.0, size.x - 6), maxf(1.0, size.y - 6)), piece_color)
-
-
-class AccessoryArt:
-	extends Control
-
-	var item_kind := ""
-
-	func _init(kind: String = "") -> void:
-		item_kind = kind
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pivot_offset = size / 2.0
-		queue_redraw()
-
-	func _draw() -> void:
-		match item_kind:
-			"hat":
-				_rect(8, 63, 84, 18, Color("#2f2140"))
-				_rect(14, 67, 72, 10, Color("#f45b9d"))
-				_rect(24, 14, 52, 56, Color("#2f2140"))
-				_rect(30, 20, 40, 42, Color("#fff1c9"))
-				_rect(30, 50, 40, 12, Color("#f45b9d"))
-			"sword":
-				_poly([Vector2(43, 4), Vector2(59, 4), Vector2(59, 62), Vector2(51, 78), Vector2(43, 62)], Color("#2f2140"))
-				_poly([Vector2(47, 10), Vector2(55, 10), Vector2(55, 60), Vector2(51, 69), Vector2(47, 60)], Color("#e9f6ff"))
-				_rect(27, 64, 48, 12, Color("#2f2140"))
-				_rect(33, 67, 36, 6, Color("#ffc857"))
-				_rect(44, 74, 14, 22, Color("#2f2140"))
-				_rect(48, 76, 6, 17, Color("#b86f43"))
-			"shield":
-				_poly([Vector2(12, 12), Vector2(88, 12), Vector2(84, 65), Vector2(50, 94), Vector2(16, 65)], Color("#2f2140"))
-				_poly([Vector2(20, 20), Vector2(80, 20), Vector2(76, 61), Vector2(50, 84), Vector2(24, 61)], Color("#ffc857"))
-				_rect(44, 29, 12, 44, Color("#fff1c9"))
-				_rect(30, 43, 40, 12, Color("#fff1c9"))
-			"bowtie":
-				_poly([Vector2(7, 24), Vector2(43, 42), Vector2(43, 62), Vector2(7, 80)], Color("#2f2140"))
-				_poly([Vector2(93, 24), Vector2(57, 42), Vector2(57, 62), Vector2(93, 80)], Color("#2f2140"))
-				_poly([Vector2(14, 34), Vector2(41, 47), Vector2(41, 57), Vector2(14, 70)], Color("#f45b9d"))
-				_poly([Vector2(86, 34), Vector2(59, 47), Vector2(59, 57), Vector2(86, 70)], Color("#f45b9d"))
-				_rect(40, 39, 20, 28, Color("#2f2140"))
-				_rect(45, 44, 10, 18, Color("#fff1c9"))
-			"tie":
-				_poly([Vector2(36, 8), Vector2(64, 8), Vector2(69, 28), Vector2(50, 41), Vector2(31, 28)], Color("#2f2140"))
-				_poly([Vector2(40, 13), Vector2(60, 13), Vector2(63, 25), Vector2(50, 34), Vector2(37, 25)], Color("#f45b9d"))
-				_poly([Vector2(42, 35), Vector2(58, 35), Vector2(70, 82), Vector2(50, 96), Vector2(30, 82)], Color("#2f2140"))
-				_poly([Vector2(46, 42), Vector2(54, 42), Vector2(63, 78), Vector2(50, 87), Vector2(37, 78)], Color("#f45b9d"))
-
-	func _rect(x: float, y: float, width: float, height: float, color: Color) -> void:
-		draw_rect(Rect2(x * size.x / 100.0, y * size.y / 100.0, width * size.x / 100.0, height * size.y / 100.0), color)
-
-	func _poly(source_points: Array[Vector2], color: Color) -> void:
-		var points := PackedVector2Array()
-		for point in source_points:
-			points.append(Vector2(point.x * size.x / 100.0, point.y * size.y / 100.0))
-		draw_colored_polygon(points, color)
 
 
 func _ready() -> void:
@@ -320,6 +115,9 @@ func _ready() -> void:
 	add_child(screen_layer)
 	_fit_design_canvas()
 	Localization.locale_changed.connect(_on_locale_changed)
+	StepCounter.steps_ready.connect(_on_steps_ready)
+	StepCounter.permission_changed.connect(_on_step_permission_changed)
+	StepCounter.step_error.connect(_on_step_error)
 	_show_main_menu()
 	layout_ready = true
 
@@ -354,6 +152,17 @@ func _island_vertical_offset() -> float:
 	return clampf((canvas_size.y - 1280.0) * 0.5, 0.0, 180.0)
 
 
+func _safe_top_y(base_y: float = 32.0) -> float:
+	if OS.get_name() not in ["iOS", "Android"]:
+		return base_y
+	var safe_area := DisplayServer.get_display_safe_area()
+	var window_size := DisplayServer.window_get_size()
+	if safe_area.position.y <= 0 or window_size.x <= 0:
+		return maxf(base_y, 104.0 if OS.get_name() == "iOS" else 64.0)
+	var safe_top_in_design_units := float(safe_area.position.y) * DESIGN_WIDTH / float(window_size.x)
+	return maxf(base_y, safe_top_in_design_units + 18.0)
+
+
 func _process(delta: float) -> void:
 	if current_screen == "groom" and is_instance_valid(groom_sprite):
 		var response_speed := 13.0 if grooming else 7.5
@@ -380,9 +189,13 @@ func _process(delta: float) -> void:
 func _clear_screen() -> void:
 	walking = false
 	grooming = false
+	groom_completion_started = false
 	groom_stretch_target = Vector2.ONE
 	groom_rotation_target = 0.0
 	groom_drag_accumulator = Vector2.ZERO
+	if groom_completion_tween != null and groom_completion_tween.is_valid():
+		groom_completion_tween.kill()
+	groom_completion_tween = null
 	for child in screen_layer.get_children():
 		child.queue_free()
 	dragon_actor = null
@@ -409,11 +222,17 @@ func _clear_screen() -> void:
 	if competition_result_tween != null and competition_result_tween.is_valid():
 		competition_result_tween.kill()
 	competition_result_tween = null
+	flight_score_label = null
+	flight_distance_label = null
+	if flight_contest_tween != null and flight_contest_tween.is_valid():
+		flight_contest_tween.kill()
+	flight_contest_tween = null
 
 
 func _show_main_menu() -> void:
 	_clear_screen()
 	current_screen = "main"
+	var top_shift := _safe_top_y(38.0) - 38.0
 	var sky_fill := ColorRect.new()
 	sky_fill.position = Vector2.ZERO
 	sky_fill.size = canvas_size
@@ -428,26 +247,26 @@ func _show_main_menu() -> void:
 	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	screen_layer.add_child(wash)
 
-	_add_resource_pill(Vector2(38, 38), "✦  125")
-	_add_resource_pill(Vector2(510, 38), "●  430", GOLD)
-	var language_button := _small_button(Localization.get_locale().to_upper(), Rect2(300, 38, 120, 62), CREAM)
+	_add_resource_pill(Vector2(38, 38 + top_shift), GameState.gems, "gem", PINK)
+	_add_resource_pill(Vector2(510, 38 + top_shift), GameState.gold, "coin", GOLD)
+	var language_button := _small_button(Localization.get_locale().to_upper(), Rect2(300, 38 + top_shift, 120, 62), CREAM)
 	language_button.add_theme_font_size_override("font_size", 24)
 	language_button.pressed.connect(Localization.cycle_locale)
 	screen_layer.add_child(language_button)
 
 	var title_shadow := _label(_t("BRAND_NAME"), 82, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	title_shadow.position = Vector2(3, 145)
+	title_shadow.position = Vector2(3, 145 + top_shift)
 	title_shadow.size = Vector2(720, 105)
 	screen_layer.add_child(title_shadow)
 	var title := _label(_t("BRAND_NAME"), 82, PINK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	title.position = Vector2(0, 138)
+	title.position = Vector2(0, 138 + top_shift)
 	title.size = Vector2(720, 105)
 	title.add_theme_color_override("font_outline_color", INK)
 	title.add_theme_constant_override("outline_size", 8)
 	screen_layer.add_child(title)
 
 	var ribbon := Panel.new()
-	ribbon.position = Vector2(160, 240)
+	ribbon.position = Vector2(160, 240 + top_shift)
 	ribbon.size = Vector2(400, 70)
 	ribbon.add_theme_stylebox_override("panel", _panel_style(CREAM, INK, 14, 6))
 	screen_layer.add_child(ribbon)
@@ -455,11 +274,11 @@ func _show_main_menu() -> void:
 	subtitle.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 12)
 	ribbon.add_child(subtitle)
 
-	var dragon := _texture_rect(DRAGON_TEXTURE, Rect2(178, 312, 364, 318), TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+	var dragon := _texture_rect(DRAGON_TEXTURE, Rect2(178, 312 + top_shift, 364, 318), TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
 	screen_layer.add_child(dragon)
 
 	var prompt_panel := Panel.new()
-	prompt_panel.position = Vector2(42, 635)
+	prompt_panel.position = Vector2(42, 635 + top_shift)
 	prompt_panel.size = Vector2(636, 91)
 	prompt_panel.add_theme_stylebox_override("panel", _panel_style(Color(1, 0.98, 0.91, 0.93), INK, 18, 5))
 	screen_layer.add_child(prompt_panel)
@@ -473,9 +292,9 @@ func _show_main_menu() -> void:
 	_add_button_caption(den_button, _t("NAV_DEN_CAPTION"))
 
 	var shop_button := _button(_t("NAV_SHOP"), Rect2(72, 972, 276, 118), Color("#8ed5aa"), Color("#4d9a70"))
-	shop_button.disabled = true
+	shop_button.pressed.connect(_show_shop)
 	screen_layer.add_child(shop_button)
-	_add_button_caption(shop_button, _t("COMING_SOON"))
+	_add_button_caption(shop_button, _t("SHOP_CAPTION"))
 
 	var contest_button := _button(_t("NAV_CONTEST"), Rect2(372, 972, 276, 118), GOLD, Color("#d38a38"))
 	contest_button.pressed.connect(_show_competition)
@@ -483,135 +302,588 @@ func _show_main_menu() -> void:
 	_add_button_caption(contest_button, _t("CONTEST_CAPTION"))
 
 	var footer := _label(_t("FOOTER"), 21, INK_SOFT, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	footer.position = Vector2(0, canvas_size.y - 105)
+	footer.position = Vector2(0, canvas_size.y - 112)
 	footer.size = Vector2(720, 40)
 	screen_layer.add_child(footer)
+	var version := _label(BUILD_INFO.VERSION, 18, INK_SOFT, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	version.position = Vector2(0, canvas_size.y - 72)
+	version.size = Vector2(720, 30)
+	screen_layer.add_child(version)
 
 
 func _show_den() -> void:
 	_clear_screen()
 	current_screen = "den"
-	var sky := PixelSky.new()
+	var top_shift := _safe_top_y(44.0) - 44.0
+	var sky := PIXEL_ART.PixelSky.new()
 	sky.position = Vector2.ZERO
 	sky.size = canvas_size
 	screen_layer.add_child(sky)
 
-	var back := _small_button("‹", Rect2(32, 44, 78, 72), CREAM)
+	var back := _small_button("‹", Rect2(32, 44 + top_shift, 78, 72), CREAM)
 	back.pressed.connect(_show_main_menu)
 	screen_layer.add_child(back)
 
 	var title := _label(_t("DEN_TITLE"), 47, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	title.position = Vector2(112, 46)
+	title.position = Vector2(112, 46 + top_shift)
 	title.size = Vector2(496, 67)
 	screen_layer.add_child(title)
 
-	var count := _label(_t("DEN_COUNT", {"owned": 1, "capacity": 12}), 22, INK_SOFT, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	count.position = Vector2(0, 130)
-	count.size = Vector2(720, 34)
-	screen_layer.add_child(count)
-
 	var info := Panel.new()
-	info.position = Vector2(40, 184)
+	info.position = Vector2(40, 168 + top_shift)
 	info.size = Vector2(640, 90)
 	info.add_theme_stylebox_override("panel", _panel_style(Color("#fff1c9"), INK, 14, 5))
 	screen_layer.add_child(info)
-	var info_text := _label(_t("DEN_INSTRUCTION"), 25, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	var info_text := _label(_t("DEN_HUB_INSTRUCTION"), 27, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
 	info_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 12)
 	info.add_child(info_text)
 
-	var card := Button.new()
-	card.position = Vector2(48, 310)
-	card.size = Vector2(624, 650)
-	card.focus_mode = Control.FOCUS_NONE
-	card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	card.add_theme_stylebox_override("normal", _panel_style(WHITE, INK, 22, 9))
-	card.add_theme_stylebox_override("hover", _panel_style(Color("#fff9de"), PINK_DARK, 22, 9))
-	card.add_theme_stylebox_override("pressed", _panel_style(CREAM, PINK_DARK, 22, 3))
-	card.pressed.connect(_show_habitat)
+	var dragons_button := _button(
+		_t("DEN_DRAGONS"),
+		Rect2(72, 320 + top_shift, 576, 168),
+		PINK,
+		PINK_DARK
+	)
+	dragons_button.pressed.connect(_show_dragons)
+	screen_layer.add_child(dragons_button)
+	_add_button_caption(dragons_button, _t("DEN_DRAGONS_CAPTION", {"count": GameState.dragons.size()}))
+
+	var eggs_button := _button(
+		_t("DEN_EGGS"),
+		Rect2(72, 530 + top_shift, 576, 168),
+		GOLD,
+		Color("#d38a38")
+	)
+	eggs_button.pressed.connect(_show_eggs)
+	screen_layer.add_child(eggs_button)
+	_add_button_caption(eggs_button, _t("DEN_EGGS_CAPTION", {"count": GameState.eggs.size()}))
+
+	var shop_button := _button(_t("NAV_SHOP"), Rect2(120, 770 + top_shift, 480, 112), Color("#8ed5aa"), Color("#4d9a70"))
+	shop_button.pressed.connect(_show_shop)
+	screen_layer.add_child(shop_button)
+	_add_button_caption(shop_button, _t("SHOP_CAPTION"))
+
+
+func _show_dragons() -> void:
+	_clear_screen()
+	current_screen = "dragons"
+	var top_shift := _safe_top_y(44.0) - 44.0
+	var sky := PIXEL_ART.PixelSky.new()
+	sky.position = Vector2.ZERO
+	sky.size = canvas_size
+	screen_layer.add_child(sky)
+
+	var back := _small_button("‹", Rect2(32, 44 + top_shift, 78, 72), CREAM)
+	back.pressed.connect(_show_den)
+	screen_layer.add_child(back)
+	var title := _label(_t("DEN_DRAGONS"), 47, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	title.position = Vector2(112, 46 + top_shift)
+	title.size = Vector2(496, 67)
+	screen_layer.add_child(title)
+	var count := _label(
+		_t("DEN_COUNT", {"owned": GameState.dragons.size(), "capacity": GameState.DRAGON_CAPACITY}),
+		22,
+		INK_SOFT,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	count.position = Vector2(0, 130 + top_shift)
+	count.size = Vector2(720, 34)
+	screen_layer.add_child(count)
+
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(0, 174 + top_shift)
+	scroll.size = Vector2(720, maxf(420.0, canvas_size.y - 174.0 - top_shift))
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	screen_layer.add_child(scroll)
+	var content := Control.new()
+	var dragon_rows := ceili(GameState.dragons.size() / 2.0)
+	content.custom_minimum_size = Vector2(720, maxf(580.0, 142.0 + dragon_rows * 450.0))
+	scroll.add_child(content)
+
+	var info := Panel.new()
+	info.position = Vector2(40, 10)
+	info.size = Vector2(640, 84)
+	info.add_theme_stylebox_override("panel", _panel_style(CREAM, INK, 14, 5))
+	content.add_child(info)
+	var info_text := _label(_t("DEN_INSTRUCTION"), 25, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	info_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 10)
+	info.add_child(info_text)
+
+	var dragon_count := GameState.dragons.size()
+	var card_width := 624.0 if dragon_count == 1 else 300.0
+	for index in dragon_count:
+		var dragon_data: Dictionary = GameState.dragons[index]
+		var is_ice_dragon := String(dragon_data.get("species", "sunwing")) == "ice"
+		var column := index % 2
+		var row := index / 2
+		var card_x := 48.0 if dragon_count == 1 else 42.0 + column * 330.0
+		var card_y := 128.0 + row * 450.0
+		var card := Button.new()
+		card.position = Vector2(card_x, card_y)
+		card.size = Vector2(card_width, 410)
+		card.focus_mode = Control.FOCUS_NONE
+		card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		card.add_theme_stylebox_override("normal", _panel_style(WHITE, INK, 20, 8))
+		card.add_theme_stylebox_override("hover", _panel_style(Color("#fff9de"), PINK_DARK, 20, 8))
+		card.add_theme_stylebox_override("pressed", _panel_style(CREAM, PINK_DARK, 20, 3))
+		card.pressed.connect(_select_dragon.bind(String(dragon_data.get("id", "luma"))))
+		content.add_child(card)
+
+		var portrait_back := Panel.new()
+		portrait_back.position = Vector2(20, 22)
+		portrait_back.size = Vector2(card_width - 40.0, 245)
+		portrait_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		portrait_back.add_theme_stylebox_override(
+			"panel",
+			_panel_style(Color("#dff8ff") if is_ice_dragon else Color("#bdeaf7"), INK, 16, 3)
+		)
+		card.add_child(portrait_back)
+		var portrait := _texture_rect(
+			_dragon_texture_for(dragon_data),
+			Rect2(20, 5, portrait_back.size.x - 40.0, 230),
+			TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		)
+		portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if is_ice_dragon else CanvasItem.TEXTURE_FILTER_LINEAR
+		portrait_back.add_child(portrait)
+		var dragon_name := _label(
+			_t(String(dragon_data.get("name_key", "DRAGON_NAME"))),
+			42 if dragon_count == 1 else 34,
+			Color("#3187b8") if is_ice_dragon else PINK_DARK,
+			HORIZONTAL_ALIGNMENT_CENTER,
+			FONT_BOLD
+		)
+		dragon_name.position = Vector2(12, 278)
+		dragon_name.size = Vector2(card_width - 24.0, 54)
+		card.add_child(dragon_name)
+		var visit := _label(_t("VISIT_ISLAND"), 23, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+		visit.position = Vector2(10, 342)
+		visit.size = Vector2(card_width - 20.0, 40)
+		card.add_child(visit)
+
+
+func _select_dragon(dragon_id: String) -> void:
+	selected_dragon_id = dragon_id
+	_show_habitat()
+
+
+func _selected_dragon_name() -> String:
+	for dragon in GameState.dragons:
+		if String(dragon.get("id", "")) == selected_dragon_id:
+			return _t(String(dragon.get("name_key", "DRAGON_NAME")))
+	return _t("DRAGON_NAME")
+
+
+func _selected_dragon_data() -> Dictionary:
+	return GameState.get_dragon(selected_dragon_id)
+
+
+func _dragon_texture_for(dragon_data: Dictionary) -> Texture2D:
+	return ICE_DRAGON_TEXTURE if String(dragon_data.get("species", "sunwing")) == "ice" else DRAGON_TEXTURE
+
+
+func _selected_dragon_texture() -> Texture2D:
+	return _dragon_texture_for(_selected_dragon_data())
+
+
+func _egg_name_key(egg: Dictionary) -> String:
+	return "ICE_EGG_NAME" if String(egg.get("kind", "sunwing")) == "ice" else "EGG_NAME"
+
+
+func _add_egg_art(parent: Control, egg: Dictionary, rect: Rect2) -> Control:
+	if String(egg.get("kind", "sunwing")) == "ice":
+		var ice_egg := _texture_rect(ICE_EGG_TEXTURE, rect, TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+		ice_egg.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		parent.add_child(ice_egg)
+		return ice_egg
+	var sunwing_egg := PIXEL_ART.PixelEgg.new()
+	sunwing_egg.position = rect.position
+	sunwing_egg.size = rect.size
+	parent.add_child(sunwing_egg)
+	return sunwing_egg
+
+
+func _show_eggs() -> void:
+	_clear_screen()
+	current_screen = "eggs"
+	var top_shift := _safe_top_y(44.0) - 44.0
+	var sky := PIXEL_ART.PixelSky.new()
+	sky.position = Vector2.ZERO
+	sky.size = canvas_size
+	screen_layer.add_child(sky)
+	var back := _small_button("‹", Rect2(32, 44 + top_shift, 78, 72), CREAM)
+	back.pressed.connect(_show_den)
+	screen_layer.add_child(back)
+	var title := _label(_t("EGGS_TITLE"), 47, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	title.position = Vector2(112, 46 + top_shift)
+	title.size = Vector2(496, 67)
+	screen_layer.add_child(title)
+	var count := _label(_t("EGG_COUNT", {"count": GameState.eggs.size()}), 22, INK_SOFT, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	count.position = Vector2(0, 130 + top_shift)
+	count.size = Vector2(720, 34)
+	screen_layer.add_child(count)
+
+	if GameState.eggs.is_empty():
+		var empty_panel := Panel.new()
+		empty_panel.position = Vector2(60, 250 + top_shift)
+		empty_panel.size = Vector2(600, 300)
+		empty_panel.add_theme_stylebox_override("panel", _panel_style(WHITE, INK, 20, 7))
+		screen_layer.add_child(empty_panel)
+		var empty_text := _label(_t("NO_EGGS"), 32, PINK_DARK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+		empty_text.position = Vector2(30, 45)
+		empty_text.size = Vector2(540, 60)
+		empty_panel.add_child(empty_text)
+		var hint := _label(_t("FIND_EGG_IN_SHOP"), 24, INK_SOFT, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+		hint.position = Vector2(45, 120)
+		hint.size = Vector2(510, 75)
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		empty_panel.add_child(hint)
+		var shop := _button(_t("NAV_SHOP"), Rect2(80, 620 + top_shift, 560, 110), Color("#8ed5aa"), Color("#4d9a70"))
+		shop.pressed.connect(_show_shop)
+		screen_layer.add_child(shop)
+		return
+
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(0, 185 + top_shift)
+	scroll.size = Vector2(720, maxf(420.0, canvas_size.y - 185.0 - top_shift))
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	screen_layer.add_child(scroll)
+	var content := Control.new()
+	content.custom_minimum_size = Vector2(720, maxf(520.0, 42.0 + GameState.eggs.size() * 238.0))
+	scroll.add_child(content)
+
+	for index in GameState.eggs.size():
+		var egg: Dictionary = GameState.eggs[index]
+		var card := Button.new()
+		card.position = Vector2(48, 22 + index * 238)
+		card.size = Vector2(624, 210)
+		card.focus_mode = Control.FOCUS_NONE
+		card.add_theme_stylebox_override("normal", _panel_style(WHITE, INK, 20, 7))
+		card.add_theme_stylebox_override("hover", _panel_style(CREAM, PINK_DARK, 20, 7))
+		card.add_theme_stylebox_override("pressed", _panel_style(CREAM, PINK_DARK, 20, 3))
+		card.pressed.connect(_show_egg_detail.bind(String(egg.get("id", ""))))
+		content.add_child(card)
+		_add_egg_art(card, egg, Rect2(25, 18, 130, 170))
+		var egg_name := _label(
+			_t(_egg_name_key(egg)),
+			34,
+			Color("#3187b8") if String(egg.get("kind", "sunwing")) == "ice" else PINK_DARK,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			FONT_BOLD
+		)
+		egg_name.position = Vector2(180, 28)
+		egg_name.size = Vector2(405, 52)
+		card.add_child(egg_name)
+		var progress := int(egg.get("progress_steps", 0))
+		var required := int(egg.get("required_steps", GameState.EGG_REQUIRED_STEPS))
+		var progress_text := _label(
+			_t("EGG_NOT_STARTED") if int(egg.get("incubation_start", 0)) == 0 else _t("EGG_STEP_PROGRESS", {"current": progress, "required": required}),
+			22,
+			INK_SOFT,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			FONT_BOLD
+		)
+		progress_text.position = Vector2(180, 88)
+		progress_text.size = Vector2(405, 76)
+		progress_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card.add_child(progress_text)
+
+
+func _show_egg_detail(egg_id: String, query_steps: bool = true) -> void:
+	var egg := GameState.get_egg(egg_id)
+	if egg.is_empty():
+		_show_eggs()
+		return
+	_clear_screen()
+	current_screen = "egg_detail"
+	current_egg_id = egg_id
+	var top_shift := _safe_top_y(44.0) - 44.0
+	var sky := PIXEL_ART.PixelSky.new()
+	sky.position = Vector2.ZERO
+	sky.size = canvas_size
+	screen_layer.add_child(sky)
+	var back := _small_button("‹", Rect2(32, 44 + top_shift, 78, 72), CREAM)
+	back.pressed.connect(_show_eggs)
+	screen_layer.add_child(back)
+	var title := _label(_t("EGG_DETAIL_TITLE"), 43, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	title.position = Vector2(112, 46 + top_shift)
+	title.size = Vector2(496, 67)
+	screen_layer.add_child(title)
+
+	var egg_panel := Panel.new()
+	egg_panel.position = Vector2(70, 170 + top_shift)
+	egg_panel.size = Vector2(580, 620)
+	egg_panel.add_theme_stylebox_override("panel", _panel_style(WHITE, INK, 24, 9))
+	screen_layer.add_child(egg_panel)
+	_add_egg_art(egg_panel, egg, Rect2(165, 35, 250, 330))
+	var egg_name := _label(
+		_t(_egg_name_key(egg)),
+		38,
+		Color("#3187b8") if String(egg.get("kind", "sunwing")) == "ice" else PINK_DARK,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	egg_name.position = Vector2(30, 372)
+	egg_name.size = Vector2(520, 55)
+	egg_panel.add_child(egg_name)
+
+	var progress := int(egg.get("progress_steps", 0))
+	var required := int(egg.get("required_steps", GameState.EGG_REQUIRED_STEPS))
+	var progress_label := _label(
+		_t("EGG_STEP_PROGRESS", {"current": progress, "required": required}),
+		25,
+		INK,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	progress_label.position = Vector2(30, 438)
+	progress_label.size = Vector2(520, 42)
+	egg_panel.add_child(progress_label)
+	var progress_bar := ProgressBar.new()
+	progress_bar.position = Vector2(45, 496)
+	progress_bar.size = Vector2(490, 38)
+	progress_bar.max_value = required
+	progress_bar.value = progress
+	progress_bar.show_percentage = false
+	progress_bar.add_theme_stylebox_override("background", _panel_style(Color("#e3d4b8"), INK, 8, 0))
+	progress_bar.add_theme_stylebox_override("fill", _panel_style(GOLD, INK, 8, 0))
+	egg_panel.add_child(progress_bar)
+	var provider := _label(
+		_t("STEP_PROVIDER", {"provider": _t("STEP_PROVIDER_%s" % StepCounter.provider_name().to_upper())}),
+		19,
+		INK_SOFT,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	provider.position = Vector2(30, 548)
+	provider.size = Vector2(520, 32)
+	egg_panel.add_child(provider)
+	if not step_error_message.is_empty():
+		var error_label := _label(_step_error_text(step_error_message), 17, PINK_DARK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+		error_label.position = Vector2(80, 786 + top_shift)
+		error_label.size = Vector2(560, 68)
+		error_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		screen_layer.add_child(error_label)
+
+	var action_y := 860.0 if not step_error_message.is_empty() else 840.0
+	var incubation_start := int(egg.get("incubation_start", 0))
+	if incubation_start == 0:
+		var start := _button(_t("START_HATCHING"), Rect2(110, action_y + top_shift, 500, 110), PINK, PINK_DARK)
+		start.pressed.connect(_start_current_egg)
+		screen_layer.add_child(start)
+	elif GameState.can_hatch(egg_id):
+		var hatch := _button(_t("HATCH_NOW"), Rect2(110, action_y + top_shift, 500, 110), PINK, PINK_DARK)
+		hatch.pressed.connect(_hatch_current_egg)
+		screen_layer.add_child(hatch)
+	elif StepCounter.is_mock():
+		var test_steps := _button(_t("ADD_TEST_STEPS"), Rect2(110, action_y + top_shift, 500, 110), Color("#8ed5aa"), Color("#4d9a70"))
+		test_steps.pressed.connect(_add_test_steps)
+		screen_layer.add_child(test_steps)
+	elif not StepCounter.has_permission():
+		var permission := _button(_t("STEP_PERMISSION"), Rect2(110, action_y + top_shift, 500, 110), PINK, PINK_DARK)
+		permission.pressed.connect(StepCounter.request_permission)
+		screen_layer.add_child(permission)
+	else:
+		var refresh := _button(_t("REFRESH_STEPS"), Rect2(110, action_y + top_shift, 500, 110), Color("#8ed5aa"), Color("#4d9a70"))
+		refresh.pressed.connect(_refresh_current_egg_steps)
+		screen_layer.add_child(refresh)
+
+	if query_steps and incubation_start > 0 and (StepCounter.is_mock() or StepCounter.has_permission()):
+		call_deferred("_refresh_current_egg_steps")
+
+
+func _start_current_egg() -> void:
+	GameState.start_incubation(current_egg_id, StepCounter.get_mock_total_steps())
+	if not StepCounter.is_mock() and not StepCounter.has_permission():
+		StepCounter.request_permission()
+	_show_egg_detail(current_egg_id)
+
+
+func _refresh_current_egg_steps() -> void:
+	var egg := GameState.get_egg(current_egg_id)
+	if egg.is_empty() or int(egg.get("incubation_start", 0)) == 0:
+		return
+	step_error_message = ""
+	StepCounter.query_steps_since(
+		int(egg.get("incubation_start", 0)),
+		int(egg.get("mock_baseline", 0))
+	)
+
+
+func _add_test_steps() -> void:
+	StepCounter.add_mock_steps(250)
+	_refresh_current_egg_steps()
+
+
+func _on_steps_ready(start_unix: int, steps: int) -> void:
+	if current_egg_id.is_empty():
+		return
+	var egg := GameState.get_egg(current_egg_id)
+	if egg.is_empty() or int(egg.get("incubation_start", 0)) != start_unix:
+		return
+	GameState.update_egg_progress(current_egg_id, steps)
+	if current_screen == "egg_detail":
+		_show_egg_detail(current_egg_id, false)
+
+
+func _on_step_permission_changed(granted: bool) -> void:
+	if granted and current_screen == "egg_detail":
+		_refresh_current_egg_steps()
+
+
+func _on_step_error(message: String) -> void:
+	push_warning("Step counter: %s" % message)
+	step_error_message = message
+	if current_screen == "egg_detail":
+		_show_egg_detail(current_egg_id, false)
+
+
+func _step_error_text(message: String) -> String:
+	if "entitlement" in message.to_lower():
+		return _t("STEP_ERROR_ENTITLEMENT")
+	return _t("STEP_ERROR_WITH_DETAIL", {"detail": message})
+
+
+func _hatch_current_egg() -> void:
+	var egg_kind := String(GameState.get_egg(current_egg_id).get("kind", "sunwing"))
+	if not GameState.hatch_egg(current_egg_id):
+		return
+	var message := _label(
+		_t("ICE_HATCHED_MESSAGE") if egg_kind == "ice" else _t("HATCHED_MESSAGE"),
+		48,
+		Color("#3187b8") if egg_kind == "ice" else PINK_DARK,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	message.position = Vector2(45, canvas_size.y * 0.5 - 70)
+	message.size = Vector2(630, 100)
+	message.z_index = 3950
+	message.add_theme_color_override("font_outline_color", WHITE)
+	message.add_theme_constant_override("outline_size", 8)
+	screen_layer.add_child(message)
+	_burst_confetti(screen_layer, Vector2(canvas_size.x * 0.5, canvas_size.y * 0.48), 54, 3900)
+	var hatch_tween := create_tween()
+	hatch_tween.tween_interval(1.55)
+	hatch_tween.tween_callback(_show_dragons)
+
+
+func _show_shop() -> void:
+	_clear_screen()
+	current_screen = "shop"
+	var top_shift := _safe_top_y(44.0) - 44.0
+	var sky := PIXEL_ART.PixelSky.new()
+	sky.position = Vector2.ZERO
+	sky.size = canvas_size
+	screen_layer.add_child(sky)
+	var back := _small_button("‹", Rect2(32, 44 + top_shift, 78, 72), CREAM)
+	back.pressed.connect(_show_main_menu)
+	screen_layer.add_child(back)
+	var title := _label(_t("SHOP_TITLE"), 47, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	title.position = Vector2(112, 46 + top_shift)
+	title.size = Vector2(496, 67)
+	screen_layer.add_child(title)
+	var instruction := _label(_t("SHOP_INSTRUCTION"), 25, INK_SOFT, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	instruction.position = Vector2(50, 140 + top_shift)
+	instruction.size = Vector2(620, 70)
+	instruction.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	screen_layer.add_child(instruction)
+	var card := Panel.new()
+	card.position = Vector2(70, 240 + top_shift)
+	card.size = Vector2(580, 520)
+	card.add_theme_stylebox_override("panel", _panel_style(WHITE, INK, 24, 9))
 	screen_layer.add_child(card)
+	_add_egg_art(card, {"kind": "ice"}, Rect2(180, 35, 220, 290))
+	var item_name := _label(_t("ICE_EGG_NAME"), 37, Color("#3187b8"), HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	item_name.position = Vector2(25, 340)
+	item_name.size = Vector2(530, 55)
+	card.add_child(item_name)
+	var price := _label(_t("EGG_PRICE"), 28, GOLD, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	price.position = Vector2(25, 405)
+	price.size = Vector2(530, 45)
+	card.add_child(price)
+	var get_egg := _button(_t("BUY_EGG"), Rect2(110, 820 + top_shift, 500, 112), PINK, PINK_DARK)
+	get_egg.disabled = GameState.gold < GameState.EGG_PRICE_GOLD
+	get_egg.pressed.connect(_purchase_egg)
+	screen_layer.add_child(get_egg)
+	if get_egg.disabled:
+		var locked_hint := _label(_t("EARN_COIN_HINT"), 22, INK_SOFT, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+		locked_hint.position = Vector2(70, 955 + top_shift)
+		locked_hint.size = Vector2(580, 60)
+		locked_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		screen_layer.add_child(locked_hint)
 
-	var rarity := _badge(_t("STARTER"), Rect2(24, 22, 138, 44), PINK, WHITE)
-	card.add_child(rarity)
-	var happy := _badge(_t("HAPPY_HEART"), Rect2(416, 22, 178, 44), Color("#8ed5aa"), INK)
-	card.add_child(happy)
 
-	var portrait_back := Panel.new()
-	portrait_back.position = Vector2(42, 86)
-	portrait_back.size = Vector2(540, 340)
-	portrait_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	portrait_back.add_theme_stylebox_override("panel", _panel_style(Color("#bdeaf7"), INK, 18, 4))
-	card.add_child(portrait_back)
-	var portrait := _texture_rect(DRAGON_TEXTURE, Rect2(110, 12, 320, 310), TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
-	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	portrait_back.add_child(portrait)
-
-	var name := _label(_t("DRAGON_NAME"), 55, PINK_DARK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	name.position = Vector2(20, 446)
-	name.size = Vector2(584, 68)
-	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.add_child(name)
-	var details := _label(_t("LEVEL_SPECIES"), 24, INK_SOFT, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	details.position = Vector2(20, 512)
-	details.size = Vector2(584, 36)
-	details.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.add_child(details)
-	var visit := _label(_t("VISIT_ISLAND"), 29, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	visit.position = Vector2(20, 578)
-	visit.size = Vector2(584, 45)
-	visit.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.add_child(visit)
-
-	var note := _label(_t("DEN_NOTE"), 23, INK_SOFT, HORIZONTAL_ALIGNMENT_CENTER)
-	note.position = Vector2(45, 1010)
-	note.size = Vector2(630, 70)
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	screen_layer.add_child(note)
+func _purchase_egg() -> void:
+	var egg_id := GameState.purchase_egg("ice")
+	if not egg_id.is_empty():
+		_show_egg_detail(egg_id, false)
 
 
 func _show_habitat() -> void:
 	_clear_screen()
 	current_screen = "habitat"
+	var top_shift := _safe_top_y(32.0) - 32.0
 	bob_time = 0.0
+	var dragon_data := _selected_dragon_data()
+	var is_ice_dragon := String(dragon_data.get("species", "sunwing")) == "ice"
+	active_dragon_texture = _dragon_texture_for(dragon_data)
 	var sky_fill := ColorRect.new()
 	sky_fill.position = Vector2.ZERO
 	sky_fill.size = canvas_size
-	sky_fill.color = SKY
+	sky_fill.color = Color("#bcecff") if is_ice_dragon else SKY
 	screen_layer.add_child(sky_fill)
-	var background := _texture_rect(ISLAND_TEXTURE, Rect2(0, 0, canvas_size.x, canvas_size.y), TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+	var background := _texture_rect(
+		ICE_ISLAND_TEXTURE if is_ice_dragon else ISLAND_TEXTURE,
+		Rect2(0, 0, canvas_size.x, canvas_size.y),
+		TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	)
+	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if is_ice_dragon else CanvasItem.TEXTURE_FILTER_LINEAR
 	screen_layer.add_child(background)
 
 	var top_panel := Panel.new()
-	top_panel.position = Vector2(24, 32)
+	top_panel.position = Vector2(24, 32 + top_shift)
 	top_panel.size = Vector2(672, 104)
 	top_panel.z_index = 2000
-	top_panel.add_theme_stylebox_override("panel", _panel_style(Color(1, 0.98, 0.91, 0.94), INK, 18, 6))
+	top_panel.add_theme_stylebox_override(
+		"panel",
+		_panel_style(Color("#eefcff") if is_ice_dragon else Color(1, 0.98, 0.91, 0.94), INK, 18, 6)
+	)
 	screen_layer.add_child(top_panel)
 	var back := _small_button("‹", Rect2(16, 16, 74, 68), CREAM)
-	back.pressed.connect(_show_den)
+	back.pressed.connect(_show_dragons)
 	top_panel.add_child(back)
-	var name := _label(_t("ISLAND_TITLE"), 38, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	var active_dragon_name := _selected_dragon_name()
+	var name := _label(_t("DRAGON_ISLAND_TITLE", {"name": active_dragon_name}), 38, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
 	name.position = Vector2(92, 13)
 	name.size = Vector2(470, 48)
 	top_panel.add_child(name)
-	var level := _label(_t("LEVEL_SPECIES"), 20, INK_SOFT, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	var level := _label(
+		_t("ICE_LEVEL_SPECIES") if is_ice_dragon else _t("LEVEL_SPECIES"),
+		20,
+		INK_SOFT,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
 	level.position = Vector2(92, 59)
 	level.size = Vector2(470, 28)
 	top_panel.add_child(level)
-	var hearts := _label("♥", 35, PINK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	var hearts := _label("♥", 35, Color("#55bde8") if is_ice_dragon else PINK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
 	hearts.position = Vector2(580, 21)
 	hearts.size = Vector2(65, 50)
 	top_panel.add_child(hearts)
 
 	var tip := Panel.new()
-	tip.position = Vector2(116, 157)
+	tip.position = Vector2(116, 157 + top_shift)
 	tip.size = Vector2(488, 62)
 	tip.z_index = 2000
 	tip.add_theme_stylebox_override("panel", _panel_style(Color(0.19, 0.13, 0.25, 0.88), INK, 12, 3))
 	screen_layer.add_child(tip)
-	var tip_text := _label(_t("HABITAT_TIP"), 23, WHITE, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	var tip_text := _label(_t("HABITAT_TIP_DYNAMIC", {"name": active_dragon_name}), 23, WHITE, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
 	tip_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
 	tip.add_child(tip_text)
-	var tip_berry := BerryPickup.new()
+	var tip_berry := PIXEL_ART.BerryPickup.new()
 	tip_berry.position = Vector2(14, -2)
 	tip_berry.size = Vector2(64, 64)
 	tip_berry.scale = Vector2(0.72, 0.72)
@@ -624,12 +896,13 @@ func _show_habitat() -> void:
 	dragon_actor.z_index = 650
 	screen_layer.add_child(dragon_actor)
 
-	dragon_shadow = BlobShadow.new()
+	dragon_shadow = PIXEL_ART.BlobShadow.new()
 	dragon_shadow.position = Vector2(30, 199)
 	dragon_shadow.size = Vector2(150, 38)
 	dragon_actor.add_child(dragon_shadow)
 
-	dragon_sprite = _texture_rect(DRAGON_TEXTURE, Rect2(0, 0, 250, 224), TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+	dragon_sprite = _texture_rect(active_dragon_texture, Rect2(0, 0, 250, 224), TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+	dragon_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if is_ice_dragon else CanvasItem.TEXTURE_FILTER_LINEAR
 	dragon_sprite.pivot_offset = dragon_sprite.size / 2.0
 	dragon_actor.add_child(dragon_sprite)
 
@@ -700,47 +973,53 @@ func _show_habitat() -> void:
 	groom_button = _button(_t("GROOM"), Rect2(344, 276, 294, 108), Color("#8ed5aa"), Color("#4d9a70"))
 	groom_button.pressed.connect(_show_grooming)
 	bottom.add_child(groom_button)
-	_add_button_caption(groom_button, _t("GROOM_CAPTION"))
+	_add_button_caption(groom_button, _t("GROOM_CAPTION_DYNAMIC", {"name": active_dragon_name}))
 
 
 func _show_grooming() -> void:
 	_clear_screen()
 	current_screen = "groom"
+	var top_shift := _safe_top_y(32.0) - 32.0
+	var dragon_data := _selected_dragon_data()
+	var is_ice_dragon := String(dragon_data.get("species", "sunwing")) == "ice"
+	active_dragon_texture = _dragon_texture_for(dragon_data)
+	dragon_alpha_image = active_dragon_texture.get_image()
 	var height_mix := clampf((canvas_size.y - 1280.0) / (BASE_DESIGN_HEIGHT - 1280.0), 0.0, 1.0)
 	var portrait_height := lerpf(560.0, 738.0, height_mix)
 	var sprite_height := portrait_height - 88.0
-	var portrait_bottom := 398.0 + portrait_height
+	var portrait_bottom := 398.0 + top_shift + portrait_height
 	var hint_y := portrait_bottom + 20.0
 	var complete_y := hint_y + 80.0
 	var done_y := canvas_size.y - 142.0
 
-	var sky := PixelSky.new()
+	var sky := PIXEL_ART.PixelSky.new()
 	sky.position = Vector2.ZERO
 	sky.size = canvas_size
 	screen_layer.add_child(sky)
 	var wash := ColorRect.new()
 	wash.position = Vector2.ZERO
 	wash.size = canvas_size
-	wash.color = Color(1.0, 0.72, 0.84, 0.23)
+	wash.color = Color(0.66, 0.91, 1.0, 0.27) if is_ice_dragon else Color(1.0, 0.72, 0.84, 0.23)
 	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	screen_layer.add_child(wash)
 
 	var top_panel := Panel.new()
-	top_panel.position = Vector2(24, 32)
+	top_panel.position = Vector2(24, 32 + top_shift)
 	top_panel.size = Vector2(672, 104)
 	top_panel.z_index = 100
 	top_panel.add_theme_stylebox_override("panel", _panel_style(Color(1, 0.98, 0.91, 0.97), INK, 18, 6))
 	screen_layer.add_child(top_panel)
 	var back := _small_button("‹", Rect2(16, 16, 74, 68), CREAM)
-	back.pressed.connect(_show_habitat)
+	back.pressed.connect(_leave_grooming)
 	top_panel.add_child(back)
-	var title := _label(_t("GROOM_TITLE"), 40, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	var active_dragon_name := _selected_dragon_name()
+	var title := _label(_t("GROOM_TITLE_DYNAMIC", {"name": active_dragon_name}), 40, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
 	title.position = Vector2(98, 14)
 	title.size = Vector2(474, 70)
 	top_panel.add_child(title)
 
 	var progress_panel := Panel.new()
-	progress_panel.position = Vector2(40, 164)
+	progress_panel.position = Vector2(40, 164 + top_shift)
 	progress_panel.size = Vector2(640, 118)
 	progress_panel.z_index = 100
 	progress_panel.add_theme_stylebox_override("panel", _panel_style(WHITE, INK, 16, 5))
@@ -763,23 +1042,33 @@ func _show_grooming() -> void:
 	progress_panel.add_child(clean_bar)
 
 	var instruction := Panel.new()
-	instruction.position = Vector2(82, 306)
+	instruction.position = Vector2(82, 306 + top_shift)
 	instruction.size = Vector2(556, 66)
 	instruction.z_index = 100
 	instruction.add_theme_stylebox_override("panel", _panel_style(Color(0.19, 0.13, 0.25, 0.92), INK, 12, 3))
 	screen_layer.add_child(instruction)
-	var instruction_text := _label(_t("GROOM_INSTRUCTION"), 24, WHITE, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	var instruction_text := _label(
+		_t("GROOM_INSTRUCTION_DYNAMIC", {"name": active_dragon_name}),
+		24,
+		WHITE,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
 	instruction_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
 	instruction.add_child(instruction_text)
 
 	var portrait_panel := Panel.new()
-	portrait_panel.position = Vector2(40, 398)
+	portrait_panel.position = Vector2(40, 398 + top_shift)
 	portrait_panel.size = Vector2(640, portrait_height)
 	portrait_panel.clip_contents = true
-	portrait_panel.add_theme_stylebox_override("panel", _panel_style(Color("#bdeaf7"), INK, 22, 7))
+	portrait_panel.add_theme_stylebox_override(
+		"panel",
+		_panel_style(Color("#dff8ff") if is_ice_dragon else Color("#bdeaf7"), INK, 22, 7)
+	)
 	screen_layer.add_child(portrait_panel)
 
-	groom_sprite = _texture_rect(DRAGON_TEXTURE, Rect2(90, 420, 540, sprite_height), TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+	groom_sprite = _texture_rect(active_dragon_texture, Rect2(90, 420 + top_shift, 540, sprite_height), TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+	groom_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if is_ice_dragon else CanvasItem.TEXTURE_FILTER_LINEAR
 	groom_sprite.pivot_offset = groom_sprite.size / 2.0
 	groom_sprite.z_index = 20
 	screen_layer.add_child(groom_sprite)
@@ -794,7 +1083,7 @@ func _show_grooming() -> void:
 	groom_area.gui_input.connect(_on_groom_input)
 	screen_layer.add_child(groom_area)
 
-	groom_comb = PixelComb.new()
+	groom_comb = PIXEL_ART.PixelComb.new()
 	groom_comb.position = Vector2(groom_area.size.x - 112.0, groom_area.size.y - 104.0)
 	groom_comb.size = Vector2(96, 80)
 	groom_comb.z_index = 1
@@ -816,7 +1105,7 @@ func _show_grooming() -> void:
 
 	var done := _button(_t("GROOM_DONE"), Rect2(120, done_y, 480, 106), PINK, PINK_DARK)
 	done.z_index = 100
-	done.pressed.connect(_show_habitat)
+	done.pressed.connect(_leave_grooming)
 	screen_layer.add_child(done)
 
 
@@ -861,12 +1150,14 @@ func _groom_at(local_position: Vector2, drag_delta: Vector2) -> void:
 			_update_clean_display()
 			_spawn_groom_sparkle(groom_area.position + local_position)
 		_update_continuous_stretch(drag_delta)
+		if previous_cleanliness < 100.0 and cleanliness >= 100.0:
+			_complete_grooming()
 
 
 func _is_over_dragon(local_position: Vector2) -> bool:
 	if dragon_alpha_image == null or not is_instance_valid(groom_area):
 		return false
-	var texture_size := Vector2(DRAGON_TEXTURE.get_width(), DRAGON_TEXTURE.get_height())
+	var texture_size := Vector2(active_dragon_texture.get_width(), active_dragon_texture.get_height())
 	var sprite_local_position := groom_area.position + local_position - groom_sprite.position
 	var display_scale: float = minf(groom_sprite.size.x / texture_size.x, groom_sprite.size.y / texture_size.y)
 	var displayed_size := texture_size * display_scale
@@ -908,6 +1199,33 @@ func _update_clean_display() -> void:
 		groom_complete_label.visible = cleanliness >= 100
 
 
+func _complete_grooming() -> void:
+	if groom_completion_started or current_screen != "groom":
+		return
+	groom_completion_started = true
+	_finish_groom_stretch()
+	GameState.save_game()
+	_update_clean_display()
+	var celebration_origin := Vector2(
+		canvas_size.x * 0.5,
+		groom_area.position.y + groom_area.size.y * 0.34
+	)
+	_burst_confetti(screen_layer, celebration_origin, 46, 3900)
+	groom_completion_tween = create_tween()
+	groom_completion_tween.tween_interval(1.55)
+	groom_completion_tween.tween_callback(_finish_grooming)
+
+
+func _finish_grooming() -> void:
+	if current_screen == "groom":
+		call_deferred("_show_habitat")
+
+
+func _leave_grooming() -> void:
+	GameState.save_game()
+	_show_habitat()
+
+
 func _spawn_groom_sparkle(at_position: Vector2) -> void:
 	var sparkle := _label("✦", 27, WHITE, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
 	sparkle.position = at_position - Vector2(20, 20)
@@ -923,6 +1241,361 @@ func _spawn_groom_sparkle(at_position: Vector2) -> void:
 
 
 func _show_competition() -> void:
+	_show_flight_hub()
+
+
+func _show_flight_hub() -> void:
+	_clear_screen()
+	current_screen = "flight_hub"
+	var top_y := _safe_top_y(32.0)
+	var sky := PIXEL_ART.PixelSky.new()
+	sky.position = Vector2.ZERO
+	sky.size = canvas_size
+	screen_layer.add_child(sky)
+	var wash := ColorRect.new()
+	wash.position = Vector2.ZERO
+	wash.size = canvas_size
+	wash.color = Color(0.98, 0.69, 0.82, 0.14)
+	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	screen_layer.add_child(wash)
+
+	var top_panel := Panel.new()
+	top_panel.position = Vector2(24, top_y)
+	top_panel.size = Vector2(672, 104)
+	top_panel.add_theme_stylebox_override("panel", _panel_style(Color(1, 0.98, 0.91, 0.97), INK, 18, 6))
+	screen_layer.add_child(top_panel)
+	var back := _small_button("‹", Rect2(16, 16, 74, 68), CREAM)
+	back.pressed.connect(_show_main_menu)
+	top_panel.add_child(back)
+	var title := _label(_t("FLIGHT_HUB_TITLE"), 40, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	title.position = Vector2(96, 14)
+	title.size = Vector2(480, 70)
+	top_panel.add_child(title)
+
+	var dragon := _texture_rect(
+		FLIGHT_DRAGON_TEXTURE,
+		Rect2(90, top_y + 150, 540, 330),
+		TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	)
+	dragon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	screen_layer.add_child(dragon)
+
+	var xp := GameState.get_flight_xp(selected_dragon_id)
+	var level := GameState.get_flight_level(selected_dragon_id)
+	var progress := xp % GameState.FLIGHT_XP_PER_LEVEL
+	var stats := Panel.new()
+	stats.position = Vector2(72, top_y + 490)
+	stats.size = Vector2(576, 150)
+	stats.add_theme_stylebox_override("panel", _panel_style(WHITE, INK, 18, 6))
+	screen_layer.add_child(stats)
+	var level_label := _label(
+		_t("FLIGHT_LEVEL", {"level": level}),
+		34,
+		PINK_DARK,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	level_label.position = Vector2(20, 12)
+	level_label.size = Vector2(536, 48)
+	stats.add_child(level_label)
+	var xp_label := _label(
+		_t("FLIGHT_XP_PROGRESS", {"current": progress, "required": GameState.FLIGHT_XP_PER_LEVEL}),
+		23,
+		INK_SOFT,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	xp_label.position = Vector2(20, 62)
+	xp_label.size = Vector2(536, 36)
+	stats.add_child(xp_label)
+	var xp_bar := ProgressBar.new()
+	xp_bar.position = Vector2(34, 105)
+	xp_bar.size = Vector2(508, 27)
+	xp_bar.max_value = GameState.FLIGHT_XP_PER_LEVEL
+	xp_bar.value = progress
+	xp_bar.show_percentage = false
+	xp_bar.add_theme_stylebox_override("background", _panel_style(Color("#e3d4b8"), INK, 7, 0))
+	xp_bar.add_theme_stylebox_override("fill", _panel_style(PINK, INK, 7, 0))
+	stats.add_child(xp_bar)
+
+	var training := _button(_t("FLIGHT_TRAINING"), Rect2(72, top_y + 690, 576, 118), PINK, PINK_DARK)
+	training.pressed.connect(_show_flight_training)
+	screen_layer.add_child(training)
+	_add_button_caption(training, _t("FLIGHT_TRAINING_CAPTION"))
+
+	var contest := _button(_t("FLIGHT_CONTEST"), Rect2(72, top_y + 845, 576, 118), GOLD, Color("#d38a38"))
+	contest.disabled = not GameState.can_enter_flight_contest(selected_dragon_id)
+	contest.pressed.connect(_show_flight_contest)
+	screen_layer.add_child(contest)
+	_add_button_caption(
+		contest,
+		_t("FLIGHT_CONTEST_CAPTION") if not contest.disabled else _t(
+			"FLIGHT_CONTEST_LOCKED",
+			{"level": GameState.FLIGHT_CONTEST_LEVEL}
+		)
+	)
+
+
+func _show_flight_training() -> void:
+	_clear_screen()
+	current_screen = "flight_training"
+	flight_run_start_level = GameState.get_flight_level(selected_dragon_id)
+	var top_y := _safe_top_y(32.0)
+	var game_top := top_y + 126.0
+	var game := FLIGHT_GAME.new()
+	game.position = Vector2.ZERO + Vector2(0, game_top)
+	game.size = Vector2(canvas_size.x, canvas_size.y - game_top)
+	game.score_changed.connect(_on_flight_score_changed)
+	game.run_finished.connect(_on_flight_run_finished)
+	screen_layer.add_child(game)
+
+	var top_panel := Panel.new()
+	top_panel.position = Vector2(24, top_y)
+	top_panel.size = Vector2(672, 104)
+	top_panel.z_index = 100
+	top_panel.add_theme_stylebox_override("panel", _panel_style(Color(1, 0.98, 0.91, 0.97), INK, 18, 6))
+	screen_layer.add_child(top_panel)
+	var back := _small_button("‹", Rect2(16, 16, 74, 68), CREAM)
+	back.pressed.connect(_show_flight_hub)
+	top_panel.add_child(back)
+	var title := _label(_t("FLIGHT_TRAINING"), 38, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	title.position = Vector2(94, 8)
+	title.size = Vector2(484, 48)
+	top_panel.add_child(title)
+	flight_score_label = _label(
+		_t("FLIGHT_LIVE_SCORE", {"xp": 0, "level": flight_run_start_level}),
+		22,
+		PINK_DARK,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	flight_score_label.position = Vector2(94, 54)
+	flight_score_label.size = Vector2(484, 34)
+	top_panel.add_child(flight_score_label)
+
+	var tap_hint := Panel.new()
+	tap_hint.position = Vector2(142, game_top + 44)
+	tap_hint.size = Vector2(436, 70)
+	tap_hint.z_index = 90
+	tap_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tap_hint.add_theme_stylebox_override("panel", _panel_style(Color(0.19, 0.13, 0.25, 0.88), INK, 12, 3))
+	screen_layer.add_child(tap_hint)
+	var hint_label := _label(_t("FLIGHT_TAP_HINT"), 24, WHITE, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	hint_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
+	tap_hint.add_child(hint_label)
+	var hide_hint := create_tween()
+	hide_hint.tween_interval(2.2)
+	hide_hint.tween_property(tap_hint, "modulate:a", 0.0, 0.5)
+
+
+func _on_flight_score_changed(score: int) -> void:
+	GameState.add_flight_xp(selected_dragon_id, 1)
+	if is_instance_valid(flight_score_label):
+		flight_score_label.text = _t(
+			"FLIGHT_LIVE_SCORE",
+			{"xp": score, "level": GameState.get_flight_level(selected_dragon_id)}
+		)
+
+
+func _on_flight_run_finished(score: int, _completed: bool) -> void:
+	var previous_level := flight_run_start_level
+	var new_level := GameState.get_flight_level(selected_dragon_id)
+	var overlay := Control.new()
+	overlay.position = Vector2.ZERO
+	overlay.size = canvas_size
+	overlay.z_index = 4000
+	screen_layer.add_child(overlay)
+	var dim := ColorRect.new()
+	dim.position = Vector2.ZERO
+	dim.size = canvas_size
+	dim.color = Color(0.10, 0.07, 0.14, 0.68)
+	overlay.add_child(dim)
+	var panel := Panel.new()
+	panel.position = Vector2(60, canvas_size.y * 0.5 - 285)
+	panel.size = Vector2(600, 570)
+	panel.add_theme_stylebox_override("panel", _panel_style(WHITE, INK, 24, 10))
+	overlay.add_child(panel)
+	var result_title := _label(
+		_t("FLIGHT_ROUND_OVER"),
+		40,
+		PINK_DARK,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	result_title.position = Vector2(30, 40)
+	result_title.size = Vector2(540, 64)
+	panel.add_child(result_title)
+	var xp_result := _label(
+		_t("FLIGHT_XP_EARNED", {"xp": score}),
+		30,
+		GOLD,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	xp_result.position = Vector2(30, 120)
+	xp_result.size = Vector2(540, 54)
+	panel.add_child(xp_result)
+	var level_result := _label(
+		_t("FLIGHT_LEVEL_UP", {"level": new_level}) if new_level > previous_level else _t(
+			"FLIGHT_LEVEL",
+			{"level": new_level}
+		),
+		27,
+		INK,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	level_result.position = Vector2(30, 185)
+	level_result.size = Vector2(540, 52)
+	panel.add_child(level_result)
+	var progress_note := _label(
+		_t("FLIGHT_CONTEST_READY") if GameState.can_enter_flight_contest(selected_dragon_id) else _t(
+			"FLIGHT_LEVELS_TO_GO",
+			{"count": GameState.FLIGHT_CONTEST_LEVEL - new_level}
+		),
+		24,
+		INK_SOFT,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	progress_note.position = Vector2(55, 245)
+	progress_note.size = Vector2(490, 76)
+	progress_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(progress_note)
+	var retry := _button(_t("FLIGHT_RETRY"), Rect2(80, 340, 440, 82), PINK, PINK_DARK)
+	retry.add_theme_font_size_override("font_size", 31)
+	retry.pressed.connect(_show_flight_training)
+	panel.add_child(retry)
+	var hub := _button(_t("FLIGHT_BACK_TO_HUB"), Rect2(80, 444, 440, 82), Color("#8ed5aa"), Color("#4d9a70"))
+	hub.add_theme_font_size_override("font_size", 29)
+	hub.pressed.connect(_show_flight_hub)
+	panel.add_child(hub)
+
+
+func _show_flight_contest() -> void:
+	if not GameState.can_enter_flight_contest(selected_dragon_id):
+		_show_flight_hub()
+		return
+	_clear_screen()
+	current_screen = "flight_contest"
+	var top_y := _safe_top_y(32.0)
+	var sky := PIXEL_ART.PixelSky.new()
+	sky.position = Vector2.ZERO
+	sky.size = canvas_size
+	screen_layer.add_child(sky)
+	var top_panel := Panel.new()
+	top_panel.position = Vector2(24, top_y)
+	top_panel.size = Vector2(672, 104)
+	top_panel.z_index = 100
+	top_panel.add_theme_stylebox_override("panel", _panel_style(Color(1, 0.98, 0.91, 0.97), INK, 18, 6))
+	screen_layer.add_child(top_panel)
+	var back := _small_button("‹", Rect2(16, 16, 74, 68), CREAM)
+	back.disabled = true
+	top_panel.add_child(back)
+	var title := _label(_t("FLIGHT_CONTEST"), 38, INK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	title.position = Vector2(94, 8)
+	title.size = Vector2(484, 48)
+	top_panel.add_child(title)
+	flight_distance_label = _label(
+		_t("FLIGHT_DISTANCE", {"meters": 0}),
+		22,
+		PINK_DARK,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	flight_distance_label.position = Vector2(94, 54)
+	flight_distance_label.size = Vector2(484, 34)
+	top_panel.add_child(flight_distance_label)
+
+	var ground := ColorRect.new()
+	ground.position = Vector2(0, canvas_size.y - 155)
+	ground.size = Vector2(canvas_size.x, 155)
+	ground.color = Color("#8ed5aa")
+	screen_layer.add_child(ground)
+	var ground_edge := ColorRect.new()
+	ground_edge.position = Vector2(0, canvas_size.y - 162)
+	ground_edge.size = Vector2(canvas_size.x, 8)
+	ground_edge.color = INK
+	screen_layer.add_child(ground_edge)
+
+	var dragon := _texture_rect(
+		FLIGHT_DRAGON_TEXTURE,
+		Rect2(38, top_y + 245, 240, 152),
+		TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	)
+	dragon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	dragon.flip_h = true
+	dragon.pivot_offset = dragon.size / 2.0
+	dragon.z_index = 40
+	screen_layer.add_child(dragon)
+	var target_distance := GameState.flight_contest_distance(selected_dragon_id)
+	var duration := 3.2 + minf(3.0, GameState.get_flight_level(selected_dragon_id) * 0.35)
+	var landing_y := canvas_size.y - 300.0
+	flight_contest_tween = create_tween()
+	flight_contest_tween.tween_interval(0.65)
+	flight_contest_tween.set_parallel(true)
+	flight_contest_tween.tween_property(dragon, "position:x", 435.0, duration).set_trans(Tween.TRANS_SINE)
+	flight_contest_tween.tween_property(dragon, "position:y", landing_y, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	flight_contest_tween.tween_property(dragon, "rotation", 0.20, duration).set_trans(Tween.TRANS_SINE)
+	flight_contest_tween.tween_method(_update_flight_distance, 0.0, float(target_distance), duration)
+	flight_contest_tween.set_parallel(false)
+	flight_contest_tween.tween_callback(_complete_flight_contest.bind(target_distance))
+
+
+func _update_flight_distance(value: float) -> void:
+	if is_instance_valid(flight_distance_label):
+		flight_distance_label.text = _t("FLIGHT_DISTANCE", {"meters": floori(value)})
+
+
+func _complete_flight_contest(distance: int) -> void:
+	var reward := GameState.complete_flight_contest(selected_dragon_id)
+	var overlay := Control.new()
+	overlay.position = Vector2.ZERO
+	overlay.size = canvas_size
+	overlay.z_index = 4000
+	screen_layer.add_child(overlay)
+	var dim := ColorRect.new()
+	dim.position = Vector2.ZERO
+	dim.size = canvas_size
+	dim.color = Color(0.10, 0.07, 0.14, 0.64)
+	overlay.add_child(dim)
+	var panel := Panel.new()
+	panel.position = Vector2(60, canvas_size.y * 0.5 - 250)
+	panel.size = Vector2(600, 500)
+	panel.add_theme_stylebox_override("panel", _panel_style(WHITE, INK, 24, 10))
+	overlay.add_child(panel)
+	var title := _label(_t("FLIGHT_CONTEST_RESULT"), 38, PINK_DARK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	title.position = Vector2(25, 40)
+	title.size = Vector2(550, 60)
+	panel.add_child(title)
+	var distance_label := _label(
+		_t("FLIGHT_DISTANCE_RESULT", {"meters": distance}),
+		34,
+		INK,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	distance_label.position = Vector2(25, 118)
+	distance_label.size = Vector2(550, 58)
+	panel.add_child(distance_label)
+	var reward_label := _label(
+		_t("FLIGHT_GOLD_REWARD", {"gold": reward}),
+		31,
+		GOLD,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		FONT_BOLD
+	)
+	reward_label.position = Vector2(25, 198)
+	reward_label.size = Vector2(550, 58)
+	panel.add_child(reward_label)
+	var shop := _button(_t("FLIGHT_GO_TO_SHOP"), Rect2(80, 304, 440, 96), PINK, PINK_DARK)
+	shop.add_theme_font_size_override("font_size", 31)
+	shop.pressed.connect(_show_shop)
+	panel.add_child(shop)
+	_burst_confetti(overlay, panel.position + Vector2(300, 180), 44, 20)
+
+
+func _show_beauty_competition() -> void:
 	_clear_screen()
 	current_screen = "competition"
 	var judge_y := canvas_size.y - 142.0
@@ -930,7 +1603,7 @@ func _show_competition() -> void:
 	var stage_height := minf(760.0, item_row_y - 315.0)
 	var stage_scale := minf(1.0, stage_height / 720.0)
 
-	var sky := PixelSky.new()
+	var sky := PIXEL_ART.PixelSky.new()
 	sky.position = Vector2.ZERO
 	sky.size = canvas_size
 	screen_layer.add_child(sky)
@@ -982,32 +1655,32 @@ func _show_competition() -> void:
 	dragon.z_index = 10
 	stage_content.add_child(dragon)
 
-	var sword := AccessoryArt.new("sword")
+	var sword := PIXEL_ART.AccessoryArt.new("sword")
 	sword.position = accessory_positions["sword"]
 	sword.size = Vector2(92, 220)
 	sword.rotation = 0.55
 	stage_content.add_child(sword)
 	_register_accessory("sword", sword)
 
-	var hat := AccessoryArt.new("hat")
+	var hat := PIXEL_ART.AccessoryArt.new("hat")
 	hat.position = accessory_positions["hat"]
 	hat.size = Vector2(120, 100)
 	stage_content.add_child(hat)
 	_register_accessory("hat", hat)
 
-	var shield := AccessoryArt.new("shield")
+	var shield := PIXEL_ART.AccessoryArt.new("shield")
 	shield.position = accessory_positions["shield"]
 	shield.size = Vector2(130, 150)
 	stage_content.add_child(shield)
 	_register_accessory("shield", shield)
 
-	var bowtie := AccessoryArt.new("bowtie")
+	var bowtie := PIXEL_ART.AccessoryArt.new("bowtie")
 	bowtie.position = accessory_positions["bowtie"]
 	bowtie.size = Vector2(92, 72)
 	stage_content.add_child(bowtie)
 	_register_accessory("bowtie", bowtie)
 
-	var tie := AccessoryArt.new("tie")
+	var tie := PIXEL_ART.AccessoryArt.new("tie")
 	tie.position = accessory_positions["tie"]
 	tie.size = Vector2(64, 132)
 	stage_content.add_child(tie)
@@ -1062,7 +1735,7 @@ func _competition_item_button(kind: String, label_text: String, position_value: 
 	button.add_theme_stylebox_override("normal", _panel_style(WHITE, INK, 14, 5))
 	button.add_theme_stylebox_override("hover", _panel_style(CREAM, PINK_DARK, 14, 5))
 	button.add_theme_stylebox_override("pressed", _panel_style(Color("#ffd1e4"), PINK_DARK, 14, 3))
-	var icon := AccessoryArt.new(kind)
+	var icon := PIXEL_ART.AccessoryArt.new(kind)
 	icon.position = Vector2(31, 8)
 	icon.size = Vector2(58, 72)
 	button.add_child(icon)
@@ -1175,14 +1848,14 @@ func _judge_competition() -> void:
 	result_panel.add_child(perfect)
 	var score_stars: Array[Control] = []
 	for star_index in 5:
-		var star := PixelStar.new()
+		var star := PIXEL_ART.PixelStar.new()
 		star.position = Vector2(96 + star_index * 84, 178)
 		star.size = Vector2(72, 72)
 		star.scale = Vector2.ONE * 0.08
 		star.modulate.a = 0.0
 		result_panel.add_child(star)
 		score_stars.append(star)
-	var score := PixelScore.new()
+	var score := PIXEL_ART.PixelScore.new()
 	score.position = Vector2(190, 258)
 	score.size = Vector2(220, 74)
 	score.scale = Vector2.ONE * 0.82
@@ -1194,7 +1867,7 @@ func _judge_competition() -> void:
 	comment.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	result_panel.add_child(comment)
 	var continue_button := _button(_t("CONTINUE"), Rect2(80, 460, 440, 96), PINK, PINK_DARK)
-	continue_button.pressed.connect(_close_competition_result)
+	continue_button.pressed.connect(_finish_competition)
 	result_panel.add_child(continue_button)
 	_animate_competition_score(score_stars, score, result_panel.position + Vector2(300, 220))
 
@@ -1209,6 +1882,8 @@ func _animate_competition_score(stars: Array[Control], score: Control, confetti_
 	competition_result_tween.tween_callback(_burst_score_confetti.bind(confetti_origin))
 	competition_result_tween.tween_callback(_reveal_score_display.bind(score))
 	competition_result_tween.tween_property(score, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	competition_result_tween.tween_interval(1.55)
+	competition_result_tween.tween_callback(_finish_competition)
 
 
 func _reveal_score_star(star: Control) -> void:
@@ -1224,25 +1899,27 @@ func _reveal_score_display(score: Control) -> void:
 func _burst_score_confetti(origin: Vector2) -> void:
 	if not is_instance_valid(competition_result_overlay):
 		return
+	_burst_confetti(competition_result_overlay, origin, 34, 30)
+
+
+func _burst_confetti(parent: Control, origin: Vector2, piece_count: int, layer: int) -> void:
+	if not is_instance_valid(parent):
+		return
 	var confetti_colors := [PINK, GOLD, MINT, SKY, Color("#9b7ede"), CREAM]
-	for piece_index in 34:
-		var piece := ConfettiPiece.new()
+	for piece_index in piece_count:
+		var piece := PIXEL_ART.ConfettiPiece.new()
 		piece.position = origin + Vector2(random.randf_range(-18.0, 18.0), random.randf_range(-8.0, 8.0))
 		piece.size = Vector2(random.randi_range(10, 17), random.randi_range(16, 27))
 		piece.velocity = Vector2(random.randf_range(-330.0, 330.0), random.randf_range(-570.0, -280.0))
 		piece.spin = random.randf_range(-9.0, 9.0)
 		piece.piece_color = confetti_colors[piece_index % confetti_colors.size()]
-		piece.z_index = 30
-		competition_result_overlay.add_child(piece)
+		piece.z_index = layer
+		parent.add_child(piece)
 
 
-func _close_competition_result() -> void:
-	if competition_result_tween != null and competition_result_tween.is_valid():
-		competition_result_tween.kill()
-	competition_result_tween = null
-	if is_instance_valid(competition_result_overlay):
-		competition_result_overlay.queue_free()
-	competition_result_overlay = null
+func _finish_competition() -> void:
+	if current_screen == "competition":
+		call_deferred("_show_habitat")
 
 
 func _feed_dragon() -> void:
@@ -1254,7 +1931,7 @@ func _feed_dragon() -> void:
 		random.randf_range(155.0, 565.0),
 		random.randf_range(500.0 + _island_vertical_offset(), 790.0 + _island_vertical_offset())
 	)
-	var berry := BerryPickup.new()
+	var berry := PIXEL_ART.BerryPickup.new()
 	berry.size = Vector2(64, 64)
 	berry.position = target - Vector2(32, 210)
 	berry.scale = Vector2(0.25, 0.25)
@@ -1291,6 +1968,7 @@ func _feed_dragon() -> void:
 	hunger_bar.value = hunger
 	hunger_label.text = "%d%%" % hunger
 	care_label.text = _t("CARE_POINTS", {"value": care_points})
+	GameState.save_game()
 	_show_care_pop(target)
 	walking = false
 	feed_button.disabled = false
@@ -1404,14 +2082,20 @@ func _add_button_caption(button: Button, caption: String) -> void:
 	button.add_theme_font_size_override("font_size", 31)
 
 
-func _add_resource_pill(position_value: Vector2, text_value: String, accent := PINK) -> void:
+func _add_resource_pill(position_value: Vector2, amount: int, icon_kind: String, accent: Color) -> void:
 	var pill := Panel.new()
 	pill.position = position_value
 	pill.size = Vector2(172, 62)
 	pill.add_theme_stylebox_override("panel", _panel_style(Color(1, 0.98, 0.91, 0.92), INK, 14, 4))
 	screen_layer.add_child(pill)
-	var pill_text := _label(text_value, 24, accent, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	pill_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
+	var icon := PIXEL_ART.ResourceIcon.new()
+	icon.icon_kind = icon_kind
+	icon.position = Vector2(20, 11)
+	icon.size = Vector2(38, 40)
+	pill.add_child(icon)
+	var pill_text := _label(str(amount), 27, accent, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	pill_text.position = Vector2(59, 0)
+	pill_text.size = Vector2(94, 62)
 	pill.add_child(pill_text)
 
 
@@ -1427,12 +2111,24 @@ func _rebuild_current_screen() -> void:
 	match current_screen:
 		"den":
 			_show_den()
+		"dragons":
+			_show_dragons()
+		"eggs":
+			_show_eggs()
+		"egg_detail":
+			_show_egg_detail(current_egg_id)
+		"shop":
+			_show_shop()
 		"habitat":
 			_show_habitat()
 		"groom":
 			_show_grooming()
-		"competition":
+		"flight_hub":
 			_show_competition()
+		"flight_training":
+			_show_flight_training()
+		"flight_contest":
+			_show_flight_contest()
 		_:
 			_show_main_menu()
 
@@ -1442,9 +2138,16 @@ func debug_groom_stroke() -> void:
 		_show_grooming()
 	grooming = true
 	groom_drag_accumulator = Vector2.ZERO
-	for index in 80:
-		var point := groom_sprite.position - groom_area.position + Vector2(240 + (index % 4) * 22, groom_sprite.size.y * 0.54 + (index % 3) * 12)
+	for index in 480:
+		var column := index % 8
+		var row := (index / 8) % 6
+		var point := groom_sprite.position - groom_area.position + Vector2(
+			groom_sprite.size.x * (0.20 + column * 0.085),
+			groom_sprite.size.y * (0.28 + row * 0.085)
+		)
 		_groom_at(point, Vector2(58, 12))
+		if cleanliness >= 100.0:
+			break
 
 
 func debug_groom_off_sprite() -> void:
@@ -1459,7 +2162,7 @@ func debug_groom_off_sprite() -> void:
 func debug_competition_drag() -> void:
 	selected_accessories["hat"] = true
 	selected_accessories["shield"] = true
-	_show_competition()
+	_show_beauty_competition()
 	var hat := accessory_nodes["hat"] as Control
 	var shield := accessory_nodes["shield"] as Control
 	_begin_accessory_drag(hat.position + hat.size / 2.0)
@@ -1475,10 +2178,38 @@ func debug_set_locale(locale_code: String) -> void:
 	Localization.set_locale(locale_code)
 
 
+func debug_add_ice_dragon() -> String:
+	for dragon in GameState.dragons:
+		if String(dragon.get("species", "sunwing")) == "ice":
+			return String(dragon.get("id"))
+	var dragon_id := "debug-ice-dragon"
+	GameState.dragons.append({
+		"id": dragon_id,
+		"name_key": "ICE_DRAGON_NAME",
+		"species": "ice",
+		"starter": false,
+		"flight_xp": 0,
+	})
+	return dragon_id
+
+
 func debug_show_screen(screen_name: String) -> void:
 	match screen_name:
 		"den":
 			_show_den()
+		"shop":
+			GameState.gold = 1
+			_show_shop()
+		"ice_egg":
+			GameState.gold = 1
+			_show_shop()
+			_purchase_egg()
+		"dragons_ice":
+			debug_add_ice_dragon()
+			_show_dragons()
+		"ice_island":
+			selected_dragon_id = debug_add_ice_dragon()
+			_show_habitat()
 		"habitat":
 			_show_habitat()
 		"groom":
@@ -1491,12 +2222,24 @@ func debug_show_screen(screen_name: String) -> void:
 			debug_groom_off_sprite()
 		"competition":
 			_show_competition()
-		"competition_dragged":
-			debug_competition_drag()
+		"flight_training":
+			_show_flight_training()
+			for child in screen_layer.get_children():
+				if child.get_script() == FLIGHT_GAME:
+					child.call("debug_show_obstacle")
+					break
+		"flight_contest":
+			GameState.add_flight_xp(
+				selected_dragon_id,
+				maxi(0, GameState.FLIGHT_CONTEST_LEVEL * GameState.FLIGHT_XP_PER_LEVEL - GameState.get_flight_xp(selected_dragon_id))
+			)
+			_show_flight_contest()
 		"result":
-			selected_accessories["hat"] = true
-			selected_accessories["bowtie"] = true
-			_show_competition()
-			_judge_competition()
+			GameState.add_flight_xp(
+				selected_dragon_id,
+				maxi(0, GameState.FLIGHT_CONTEST_LEVEL * GameState.FLIGHT_XP_PER_LEVEL - GameState.get_flight_xp(selected_dragon_id))
+			)
+			_show_flight_contest()
+			_complete_flight_contest(GameState.flight_contest_distance(selected_dragon_id))
 		_:
 			_show_main_menu()

@@ -5,17 +5,24 @@ A mobile-first Godot 4.6 proof of concept for a cozy dragon care game.
 ## Playable loop
 
 1. Choose **Den** from the main menu.
-2. Select **Luma**, the starter dragon.
-3. Press **Feed** to drop a berry. Luma walks over with a paper-sprite bob,
-   eats it, and gains care/hunger progress.
-4. Press **Groom** for a close-up care view. Drag the pixel comb inside
-   the framed grooming area with mouse or touch. The comb always follows;
-   Clean and stretching only react over Luma's visible pixels.
-5. Choose **Contest**, add a hat, sword, shield, bowtie, or tie, then drag
-   each item into place. The last moved item stays on top. The MVP judge
-   awards a fixed 5/5 result.
+2. Choose **Dragons** to visit Luma, or **Eggs** to inspect incubating eggs.
+3. Select a dragon and press **Feed** to drop a berry. The dragon walks over
+   with a paper-sprite bob, eats it, and gains care/hunger progress.
+4. Press **Groom** for a close-up care view. Drag the pixel comb inside the
+   framed grooming area. Clean and stretching react over the dragon's visible pixels.
+5. Choose **Contest** to enter Flight School. In **Flight Training**, tap to
+   flap between rock spikes. Each cleared obstacle awards one XP, every ten XP
+   adds one Flight Level, and training continues until Luma hits an obstacle.
+6. Reach Flight Level 5 to unlock the **Flight Contest**. The selected dragon
+   then glides 50 metres and wins one gold coin.
+7. Open **Shop** and spend one gold coin on a **Frost Crystal Egg**. Start
+   incubation and walk 1,000 steps to hatch Frost, an ice dragon. Desktop/web
+   builds provide a test-step button.
+8. Select Frost in the den to visit a dedicated snow-and-crystal island. Care,
+   grooming, flight XP, and contest progress remain attached to the selected
+   dragon.
 
-Shop is deliberately marked **Coming soon**.
+Game state is saved locally between sessions.
 
 ## Run
 
@@ -28,13 +35,30 @@ Open this folder in Godot 4.6 and run the project, or launch it from a terminal:
 The UI is authored on a 720-pixel-wide logical canvas and rendered at each
 device's native resolution. The logical height adapts to the phone's aspect
 ratio, keeping text and controls at readable sizes without letterboxing or
-crushing a device-sized framebuffer into a preview window. The grooming view
-also switches to a compact vertical arrangement on shorter phones.
+crushing a device-sized framebuffer into a preview window. On iOS and Android,
+top headers and menu resources also use the system safe-area inset so they stay
+below notches, camera cutouts, and the Dynamic Island. The grooming view also
+switches to a compact vertical arrangement on shorter phones.
 
 The responsive layouts are tested at 750×1334 (iPhone SE), 1179×2556
 (current iPhone Pro), 1080×2160 (compact Android), and 1080×2400 (tall
 Android). Android and iOS export presets are included; platform signing and
 toolchains still need to be configured on the export machine.
+
+## Project documentation
+
+- [Architecture and module boundaries](docs/ARCHITECTURE.md)
+- [Flight training, contest, and reward rules](docs/FLIGHT_GAMEPLAY.md)
+- [Frost egg, ice dragon, and winter island](docs/ICE_DRAGON.md)
+- [Native iOS/Android build pipeline](docs/MOBILE_PIPELINE.md)
+- [Step-counter plugin contract](native/README.md)
+
+Run the gameplay smoke test without opening a window:
+
+```sh
+/Applications/Godot.app/Contents/MacOS/Godot \
+  --headless --path . --script tests/smoke_test.gd
+```
 
 ## Installable Web App
 

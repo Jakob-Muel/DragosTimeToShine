@@ -17,17 +17,34 @@ concurrency:
 
 env:
   GODOT_VERSION: 4.6.1-stable
+  VERSION_BASE_COMMIT_COUNT: 3
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Check out project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set build version from Git history
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit_count="$(git rev-list --count HEAD)"
+          build_number="$((commit_count - VERSION_BASE_COMMIT_COUNT))"
+          if ((build_number < 1)); then
+            build_number=1
+          fi
+          sed -i \
+            "s/^const VERSION := .*/const VERSION := \"v0.${build_number}\"/" \
+            scripts/build_info.gd
+          grep -Fx "const VERSION := \"v0.${build_number}\"" scripts/build_info.gd
 
       - name: Cache Godot and export templates
         id: godot-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cache/dragos-godot
@@ -63,6 +80,11 @@ jobs:
           "$HOME/.cache/dragos-godot/godot" \
             --headless --editor --path . --quit-after 10
 
+      - name: Run gameplay smoke test
+        run: |
+          "$HOME/.cache/dragos-godot/godot" \
+            --headless --path . --script tests/smoke_test.gd
+
       - name: Export installable web app
         run: |
           mkdir -p build/web
@@ -74,13 +96,22 @@ jobs:
           test -n "$(find build/web -maxdepth 1 -name '*.wasm' -print -quit)"
           test -n "$(find build/web -maxdepth 1 -name '*.service.worker.js' -print -quit)"
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+      - name: Package PWA for GitHub Pages
+        run: |
+          tar \
+            --dereference \
+            --hard-dereference \
+            --directory build/web \
+            -cvf "$RUNNER_TEMP/artifact.tar" \
+            .
 
       - name: Upload PWA
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          path: build/web
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+          if-no-files-found: error
 
   deploy:
     environment:
@@ -91,4 +122,4 @@ jobs:
     steps:
       - name: Publish GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
