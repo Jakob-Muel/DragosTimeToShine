@@ -2,7 +2,7 @@
 
 A mobile-first Godot 4.6 proof of concept for a cozy dragon care game.
 
-## Playable loop
+## Current prototype loop
 
 1. Choose **Den** from the main menu.
 2. Choose **Dragons** to visit Luma, or **Eggs** to inspect incubating eggs.
@@ -47,6 +47,7 @@ toolchains still need to be configured on the export machine.
 
 ## Project documentation
 
+- [Intended gameplay loop and progression](docs/GAMEPLAY_LOOP.md)
 - [Architecture and module boundaries](docs/ARCHITECTURE.md)
 - [Flight training, contest, and reward rules](docs/FLIGHT_GAMEPLAY.md)
 - [Frost egg, ice dragon, and winter island](docs/ICE_DRAGON.md)
