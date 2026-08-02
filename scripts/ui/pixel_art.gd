@@ -6,9 +6,20 @@ extends RefCounted
 
 class PixelSky:
 	extends Control
+	const LARGE_CLOUDS := [
+		preload("res://assets/art/ui_redesign/clouds/large_wide.png"),
+		preload("res://assets/art/ui_redesign/clouds/large_tall.png"),
+		preload("res://assets/art/ui_redesign/clouds/large_wisp.png"),
+	]
+	const SMALL_CLOUDS := [
+		preload("res://assets/art/ui_redesign/clouds/small_wide.png"),
+		preload("res://assets/art/ui_redesign/clouds/small_tall.png"),
+		preload("res://assets/art/ui_redesign/clouds/small_wisp.png"),
+	]
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		queue_redraw()
 
 	func _draw() -> void:
@@ -25,35 +36,16 @@ class PixelSky:
 				sky_top.lerp(sky_bottom, amount)
 			)
 
-		_draw_cloud(Vector2(42, 225), 1.0)
-		_draw_cloud(Vector2(548, 376), 0.72)
-		_draw_cloud(Vector2(72, size.y * 0.57), 0.62)
-		_draw_cloud(Vector2(-72, size.y - 134), 1.2)
-		_draw_cloud(Vector2(548, size.y - 196), 0.92)
+		_draw_cloud(Vector2(42, 225), true, 0)
+		_draw_cloud(Vector2(602, 376), false, 1)
+		_draw_cloud(Vector2(72, size.y * 0.57), false, 0)
+		_draw_cloud(Vector2(-72, size.y - 134), true, 2)
+		_draw_cloud(Vector2(548, size.y - 196), true, 1)
 
-	func _draw_cloud(origin: Vector2, scale_factor: float) -> void:
-		var shadow := Color(0.79, 0.77, 0.67, 0.28)
-		var paper := Color(1.0, 0.97, 0.84, 0.86)
-		var blocks := [
-			Rect2(48, 0, 64, 16),
-			Rect2(24, 16, 112, 24),
-			Rect2(8, 40, 152, 32),
-			Rect2(0, 48, 176, 18),
-			Rect2(24, 72, 128, 12),
-		]
-		for block in blocks:
-			draw_rect(
-				Rect2(
-					origin + (block.position + Vector2(0, 8)) * scale_factor,
-					block.size * scale_factor
-				),
-				shadow
-			)
-		for block in blocks:
-			draw_rect(
-				Rect2(origin + block.position * scale_factor, block.size * scale_factor),
-				paper
-			)
+	func _draw_cloud(origin: Vector2, large: bool, variant: int) -> void:
+		var cloud_set := LARGE_CLOUDS if large else SMALL_CLOUDS
+		var texture: Texture2D = cloud_set[variant % cloud_set.size()]
+		draw_texture(texture, origin)
 
 
 class BlobShadow:
@@ -77,50 +69,72 @@ class BlobShadow:
 		draw_colored_polygon(points, Color(0.16, 0.10, 0.20, 0.28))
 
 
-class BerryPickup:
+class PixelChevron:
 	extends Control
+
+	var icon_color := Color("#382b3d")
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pivot_offset = size / 2.0
 		queue_redraw()
 
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_RESIZED:
+			queue_redraw()
+
 	func _draw() -> void:
-		var pixel := 6.0
-		var berry := [
-			Vector2i(3, 2), Vector2i(4, 2),
-			Vector2i(2, 3), Vector2i(3, 3), Vector2i(4, 3), Vector2i(5, 3),
-			Vector2i(1, 4), Vector2i(2, 4), Vector2i(3, 4), Vector2i(4, 4), Vector2i(5, 4), Vector2i(6, 4),
-			Vector2i(1, 5), Vector2i(2, 5), Vector2i(3, 5), Vector2i(4, 5), Vector2i(5, 5), Vector2i(6, 5),
-			Vector2i(2, 6), Vector2i(3, 6), Vector2i(4, 6), Vector2i(5, 6),
-			Vector2i(3, 7), Vector2i(4, 7),
+		var pixel := 5.0
+		var cells := [
+			Vector2i(3, 0),
+			Vector2i(2, 1), Vector2i(3, 1),
+			Vector2i(1, 2), Vector2i(2, 2),
+			Vector2i(0, 3), Vector2i(1, 3),
+			Vector2i(1, 4), Vector2i(2, 4),
+			Vector2i(2, 5), Vector2i(3, 5),
+			Vector2i(3, 6),
 		]
-		for cell in berry:
-			draw_rect(Rect2(Vector2(cell) * pixel + Vector2(7, 5), Vector2(pixel, pixel)), Color("#e63e78"))
-		draw_rect(Rect2(25, 11, 6, 12), Color("#49334f"))
-		draw_rect(Rect2(31, 5, 12, 6), Color("#49a85b"))
-		draw_rect(Rect2(37, 11, 12, 6), Color("#49a85b"))
-		draw_rect(Rect2(19, 29, 6, 6), Color("#ff8cba"))
-		draw_rect(Rect2(0, 54, 62, 7), Color(0.16, 0.10, 0.20, 0.22))
+		var icon_size := Vector2(4.0 * pixel, 7.0 * pixel)
+		var origin := ((size - icon_size) * 0.5).floor()
+		for cell in cells:
+			draw_rect(Rect2(origin + Vector2(cell) * pixel, Vector2(pixel, pixel)), icon_color)
 
 
-class PixelComb:
+class PixelGear:
 	extends Control
+
+	var icon_color := Color("#382b3d")
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pivot_offset = size / 2.0
 		queue_redraw()
 
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_RESIZED:
+			queue_redraw()
+
 	func _draw() -> void:
-		draw_rect(Rect2(5, 31, 55, 22), Color("#2f2140"))
-		draw_rect(Rect2(9, 35, 51, 14), Color("#fff1c9"))
-		draw_rect(Rect2(54, 18, 34, 18), Color("#2f2140"))
-		draw_rect(Rect2(58, 22, 26, 10), Color("#f45b9d"))
-		for tooth_x in range(58, 86, 7):
-			draw_rect(Rect2(tooth_x, 32, 6, 30), Color("#2f2140"))
-			draw_rect(Rect2(tooth_x + 1, 32, 4, 25), Color("#f45b9d"))
-		draw_rect(Rect2(13, 38, 8, 5), Color("#ffffff"))
+		var pixel := 4.0
+		var rows := [
+			"..##.##..",
+			".#######.",
+			"###...###",
+			"###...###",
+			".##...##.",
+			"###...###",
+			"###...###",
+			".#######.",
+			"..##.##..",
+		]
+		var icon_size := Vector2(9.0 * pixel, 9.0 * pixel)
+		var origin := ((size - icon_size) * 0.5).floor()
+		for y in rows.size():
+			var row: String = rows[y]
+			for x in row.length():
+				if row[x] == "#":
+					draw_rect(
+						Rect2(origin + Vector2(x, y) * pixel, Vector2(pixel, pixel)),
+						icon_color
+					)
 
 
 class ResourceIcon:

@@ -1,7 +1,7 @@
 # Art Prompts — Visual Style Cleanup
 
 Image-generation prompts for replacing the code-drawn UI (buttons, panels, clouds, ground)
-with real pixel art assets.
+with polished modern pixel-art assets. Dragons, islands, and eggs keep their existing art.
 
 **Read the Ground Rules first** — the shared style block goes at the top of *every* prompt.
 AI image models default to fake pixel art (anti-aliased edges, 5000 colors, off-grid pixels).
@@ -63,13 +63,16 @@ Layout must be responsive rather than scaled as one fixed composition:
 ### Shared style block — paste at the START of every prompt
 
 ```
-16-bit GBA-era pixel art, in the style of Pokémon Ruby/Sapphire UI.
+Polished contemporary mobile-game pixel art with a restrained 16-bit handheld
+influence. Stylized and visibly pixelated, but fresh and current rather than
+nostalgic or old-fashioned. Clean mobile UI hierarchy and generous spacing.
 STRICT: hard-edged pixels only, NO anti-aliasing, NO gradients, NO blur,
 NO soft or drop shadows, NO transparency except fully transparent background.
 Every pixel snapped to the grid. Limited palette, flat color fills with
 2-tone shading only. Single 1px dark outline (#382b3d) around every shape.
 Light source is top-left: highlights on top and left faces, shade on bottom
-and right faces. Front-facing orthographic, no perspective.
+and right faces. Playful stepped silhouettes and subtle asymmetry, with no
+ornate decoration. Front-facing orthographic, no perspective.
 Palette restricted to: [paste palette hexes]
 ```
 
@@ -79,7 +82,8 @@ Palette restricted to: [paste palette hexes]
 NOT: anti-aliased, smooth, vector, flat design, Material Design, iOS style,
 3D render, glossy, bevel, gloss highlight, soft shadow, gaussian blur,
 gradient mesh, photorealistic, painterly, watercolor, high resolution detail,
-gridlines, checkerboard, watermark, text, letters, numbers.
+gridlines, checkerboard, watermark, text, letters, numbers, dated retro UI,
+literal imitation of an existing game interface, excessive nostalgia styling.
 ```
 
 ### Post-process every output (non-negotiable)
@@ -94,13 +98,32 @@ The model will still cheat. Always run this on the result:
 6. Preview at the intended in-game size on both a high-density phone and a tablet; judge
    readability at actual size, not only while zoomed into the source asset
 
+### Standing-dragon presentation
+
+Standing dragon textures must have a fully transparent background and must not contain a
+baked-in ground shadow. Present them through `WidgetFactory.dragon_presentation()` rather
+than positioning a separate shadow per dragon. The shared presenter reads the texture's
+visible alpha bounds, centers the pixel shadow beneath the actual feet, and keeps that
+contact point correct when source images have different padding or aspect ratios.
+
+Grooming and side-view flight sprites are interaction-specific exceptions and do not use
+the standing-dragon presenter.
+
 Prompts 1–6 are the ones that fix the "modern app" feel. Do those first.
 
 ---
 
-## 1. Style Reference Sheet — generate this FIRST
+## 1. Style Reference Sheet
 
-Lock the look once, then reference this image in every later prompt.
+Generated project references:
+
+- Production-size palette-quantized sheet:
+  `assets/art/ui_redesign/reference/style_reference.png` (240 × 180)
+- Original generation retained for comparison:
+  `assets/art/ui_redesign/reference/style_reference_source.png`
+
+Use the production-size sheet as the style reference for every later generated UI asset.
+It defines the visual direction but is not itself loaded by the game at runtime.
 
 ```
 [STYLE BLOCK]
@@ -127,6 +150,18 @@ Total image 240x180 pixels. Chunky, readable, cozy, cheerful.
 ## 2. Button Frames — the highest-impact asset
 
 Replaces the `StyleBoxFlat` in `scripts/ui/widget_factory.gd`.
+
+Current integrated assets:
+
+- Runtime 3× textures: `assets/art/ui_redesign/buttons/*.png` (96 × 96)
+- Palette-locked 1× masters: `assets/art/ui_redesign/buttons/source/*.png` (32 × 32)
+- Visual exploration sheet: `assets/art/ui_redesign/reference/buttons_reference_source.png`
+- Reproducible generator: `tools/generate_ui_button_assets.gd`
+
+`WidgetFactory` selects the nearest palette family for existing button colors and uses
+separate idle and pressed 9-slices. Pink, green, gold, cream, lilac, and sky variants are
+integrated. Runtime textures are exact 3× nearest-neighbour enlargements of the masters so
+one source art pixel maps to three 720-canvas logical units.
 
 Generate as a **9-slice source**: 32×32 with 10px corner margins. If the 9-slice edges come
 out uneven, fall back to generating each button at its final fixed size (216×34 full-width,
@@ -220,6 +255,16 @@ the top inside edge. Empty center.
 Replaces `_draw_cloud()` in `scripts/ui/pixel_art.gd`. The current clouds are semi-transparent
 flat rectangles with a blur-like offset copy — this is the second most visible problem.
 
+Current integrated assets:
+
+- Runtime 3× textures: `assets/art/ui_redesign/clouds/*.png`
+- Palette-locked 1× masters: `assets/art/ui_redesign/clouds/source/*.png`
+- Visual exploration sheet: `assets/art/ui_redesign/reference/clouds_reference_source.png`
+- Reproducible generator: `tools/generate_ui_cloud_assets.gd`
+
+The six opaque cloud variants replace code-drawn clouds in `PixelSky`, `FlightGame`, and
+`FlightRaceBackground`. Every consuming control forces nearest-neighbour filtering.
+
 ```
 [STYLE BLOCK]
 
@@ -251,6 +296,21 @@ currently shows only two clouds in a large empty sky.
 ## 5. Flight Screen Ground & Parallax
 
 Replaces the solid green ColorRect with a hard black line (shots 3/4).
+
+Current integrated assets:
+
+- Runtime 3× scenery: `assets/art/ui_redesign/flight_environment/*.png`
+- Palette-locked masters: `assets/art/ui_redesign/flight_environment/source/*.png`
+- Generation references: `assets/art/ui_redesign/reference/flight_forest_reference_source.png`
+  and `flight_towers_reference_source.png`
+- Reproducible scenery post-process: `tools/generate_flight_environment_assets.gd`
+
+`FlightGame` scrolls two cloud layers at 10 and 18 logical units per second and one unified
+landscape at 40. The field, forest canopy, and meadow edge are composited into the single
+`landscape.png` strip so no plain-color gaps separate them in game. Every background layer is
+deliberately slower than the 235-unit foreground towers. Tower gap caps use broad, shallow
+ruined battlements instead of narrow spikes so their visible and collision boundaries remain
+readable.
 
 ### 5a. Ground strip (tileable)
 
@@ -303,6 +363,18 @@ tiles horizontally.
 ## 6. Icon Sheet
 
 The existing top-bar icons are close; these unify them and fill the gaps.
+
+Current integrated care sprites:
+
+- Runtime 3× sprites: `assets/art/ui_redesign/icons/sunberry.png` and
+  `grooming_comb.png`
+- Palette-locked masters: `assets/art/ui_redesign/icons/source/*.png`
+- Image-generation references: `assets/art/ui_redesign/icons/reference/*.png`
+- Reproducible post-process: `tools/generate_ui_care_assets.gd`
+
+The island status panel, care-action buttons, feeding animation, and draggable grooming tool
+all use these textures through `WidgetFactory.pixel_icon()`. The former code-drawn berry and
+comb placeholders have been removed.
 
 ```
 [STYLE BLOCK]

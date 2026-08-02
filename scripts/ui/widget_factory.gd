@@ -2,6 +2,42 @@ class_name WidgetFactory
 extends RefCounted
 
 const PIXEL_ART := preload("res://scripts/ui/pixel_art.gd")
+const DRAGON_PRESENTATION := preload("res://scripts/ui/dragon_presentation.gd")
+const BUTTON_TEXTURE_MARGIN := 30.0
+const BUTTON_TEXTURES := {
+	"pink": {
+		"idle": preload("res://assets/art/ui_redesign/buttons/pink_idle.png"),
+		"pressed": preload("res://assets/art/ui_redesign/buttons/pink_pressed.png"),
+	},
+	"green": {
+		"idle": preload("res://assets/art/ui_redesign/buttons/green_idle.png"),
+		"pressed": preload("res://assets/art/ui_redesign/buttons/green_pressed.png"),
+	},
+	"gold": {
+		"idle": preload("res://assets/art/ui_redesign/buttons/gold_idle.png"),
+		"pressed": preload("res://assets/art/ui_redesign/buttons/gold_pressed.png"),
+	},
+	"cream": {
+		"idle": preload("res://assets/art/ui_redesign/buttons/cream_idle.png"),
+		"pressed": preload("res://assets/art/ui_redesign/buttons/cream_pressed.png"),
+	},
+	"lilac": {
+		"idle": preload("res://assets/art/ui_redesign/buttons/lilac_idle.png"),
+		"pressed": preload("res://assets/art/ui_redesign/buttons/lilac_pressed.png"),
+	},
+	"sky": {
+		"idle": preload("res://assets/art/ui_redesign/buttons/sky_idle.png"),
+		"pressed": preload("res://assets/art/ui_redesign/buttons/sky_pressed.png"),
+	},
+}
+const BUTTON_VARIANT_COLORS := {
+	"pink": Color("#e75d91"),
+	"green": Color("#4f956c"),
+	"gold": Color("#e9aa46"),
+	"cream": Color("#f3d9ae"),
+	"lilac": Color("#9a78b3"),
+	"sky": Color("#78d6ed"),
+}
 
 
 static func texture_rect(
@@ -17,6 +53,25 @@ static func texture_rect(
 	result.size = rect.size
 	result.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	result.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return result
+
+
+static func pixel_icon(texture: Texture2D, rect: Rect2) -> TextureRect:
+	var result := texture_rect(texture, rect, TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+	result.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	result.pivot_offset = rect.size / 2.0
+	return result
+
+
+static func dragon_presentation(
+	texture: Texture2D,
+	rect: Rect2,
+	filter := CanvasItem.TEXTURE_FILTER_LINEAR
+) -> Control:
+	var result := DRAGON_PRESENTATION.new()
+	result.position = rect.position
+	result.size = rect.size
+	result.configure(texture, filter)
 	return result
 
 
@@ -63,78 +118,99 @@ static func panel_style(
 
 static func button(text_value: String, rect: Rect2, color: Color, shadow_color: Color) -> Button:
 	var result := Button.new()
+	var variant := _closest_button_variant(color)
+	var text_color := _button_text_color(variant)
 	result.text = text_value
 	result.position = rect.position
 	result.size = rect.size
+	result.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	result.focus_mode = Control.FOCUS_NONE
 	result.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	result.add_theme_font_override("font", UiTokens.FONT_BOLD)
 	result.add_theme_font_size_override("font_size", 31)
-	result.add_theme_color_override("font_color", UiTokens.WHITE)
-	result.add_theme_color_override("font_hover_color", UiTokens.WHITE)
-	result.add_theme_color_override("font_pressed_color", UiTokens.WHITE)
-	result.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.72))
+	result.add_theme_color_override("font_color", text_color)
+	result.add_theme_color_override("font_hover_color", text_color)
+	result.add_theme_color_override("font_pressed_color", text_color)
+	result.add_theme_color_override("font_disabled_color", Color(text_color, 0.62))
 	result.clip_text = true
-	result.add_theme_stylebox_override(
-		"normal",
-		panel_style(color, color.darkened(0.28), 16, 7, Color(shadow_color, 0.34))
-	)
-	result.add_theme_stylebox_override(
-		"hover",
-		panel_style(
-			color.lightened(0.06),
-			color.darkened(0.22),
-			16,
-			8,
-			Color(shadow_color, 0.34)
-		)
-	)
-	result.add_theme_stylebox_override(
-		"pressed",
-		panel_style(
-			color.darkened(0.06),
-			color.darkened(0.30),
-			16,
-			2,
-			Color(shadow_color, 0.28)
-		)
-	)
-	result.add_theme_stylebox_override(
-		"disabled",
-		panel_style(
-			color.lerp(UiTokens.INK_SOFT, 0.42).darkened(0.06),
-			color.lerp(UiTokens.INK_SOFT, 0.58).darkened(0.20),
-			16,
-			4,
-			Color(shadow_color, 0.22)
-		)
-	)
+	result.add_theme_stylebox_override("normal", _button_texture_style(variant, false))
+	result.add_theme_stylebox_override("hover", _button_texture_style(variant, false))
+	result.add_theme_stylebox_override("pressed", _button_texture_style(variant, true))
+	result.add_theme_stylebox_override("disabled", _button_texture_style(variant, true))
+	result.set_meta("ui_button_text_color", text_color)
+	result.set_meta("ui_button_shadow_color", shadow_color)
 	return result
 
 
 static func small_button(text_value: String, rect: Rect2, color: Color) -> Button:
 	var result := Button.new()
-	result.text = text_value
+	var variant := _closest_button_variant(color)
+	var is_back_button := text_value == "‹"
+	var is_settings_button := text_value == "⚙"
+	result.text = "" if is_back_button or is_settings_button else text_value
 	result.position = rect.position
 	result.size = rect.size
+	result.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	result.focus_mode = Control.FOCUS_NONE
 	result.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	result.add_theme_font_override("font", UiTokens.FONT_BOLD)
 	result.add_theme_font_size_override("font_size", 38)
 	result.add_theme_color_override("font_color", UiTokens.INK)
-	result.add_theme_stylebox_override(
-		"normal",
-		panel_style(color, UiTokens.CREAM_DEEP.darkened(0.34), 14, 5)
-	)
-	result.add_theme_stylebox_override(
-		"hover",
-		panel_style(color.lightened(0.06), UiTokens.PINK_DARK, 14, 6)
-	)
-	result.add_theme_stylebox_override(
-		"pressed",
-		panel_style(color.darkened(0.05), UiTokens.INK_SOFT, 14, 2)
-	)
+	result.add_theme_color_override("font_hover_color", UiTokens.INK)
+	result.add_theme_color_override("font_pressed_color", UiTokens.INK)
+	result.add_theme_stylebox_override("normal", _button_texture_style(variant, false))
+	result.add_theme_stylebox_override("hover", _button_texture_style(variant, false))
+	result.add_theme_stylebox_override("pressed", _button_texture_style(variant, true))
+	if is_back_button:
+		var chevron := PIXEL_ART.PixelChevron.new()
+		chevron.name = "PixelChevron"
+		chevron.size = rect.size
+		result.add_child(chevron)
+		result.set_meta("ui_small_button_kind", "back")
+	elif is_settings_button:
+		var gear := PIXEL_ART.PixelGear.new()
+		gear.name = "PixelGear"
+		gear.size = rect.size
+		result.add_child(gear)
+		result.set_meta("ui_small_button_kind", "settings")
 	return result
+
+
+static func _button_texture_style(variant: String, pressed: bool) -> StyleBoxTexture:
+	var style := StyleBoxTexture.new()
+	style.texture = BUTTON_TEXTURES[variant]["pressed" if pressed else "idle"]
+	style.texture_margin_left = BUTTON_TEXTURE_MARGIN
+	style.texture_margin_top = BUTTON_TEXTURE_MARGIN
+	style.texture_margin_right = BUTTON_TEXTURE_MARGIN
+	style.texture_margin_bottom = BUTTON_TEXTURE_MARGIN
+	style.content_margin_left = 16.0
+	style.content_margin_right = 16.0
+	style.content_margin_top = 12.0 if pressed else 9.0
+	style.content_margin_bottom = 9.0 if pressed else 12.0
+	return style
+
+
+static func _closest_button_variant(color: Color) -> String:
+	var closest_variant := "pink"
+	var closest_distance := INF
+	for variant in BUTTON_VARIANT_COLORS:
+		var candidate: Color = BUTTON_VARIANT_COLORS[variant]
+		var red_delta := color.r - candidate.r
+		var green_delta := color.g - candidate.g
+		var blue_delta := color.b - candidate.b
+		var distance := (
+			red_delta * red_delta * 0.2126
+			+ green_delta * green_delta * 0.7152
+			+ blue_delta * blue_delta * 0.0722
+		)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest_variant = variant
+	return closest_variant
+
+
+static func _button_text_color(variant: String) -> Color:
+	return UiTokens.INK if variant in ["cream", "gold", "sky"] else UiTokens.WHITE
 
 
 static func badge(text_value: String, rect: Rect2, color: Color, text_color: Color) -> Panel:
@@ -149,33 +225,47 @@ static func badge(text_value: String, rect: Rect2, color: Color, text_color: Col
 	return result
 
 
-static func add_button_caption(target: Button, caption: String) -> void:
+static func add_button_caption(
+	target: Button,
+	caption: String,
+	icon_texture: Texture2D = null
+) -> void:
 	var title_text := target.text
+	var text_color: Color = target.get_meta("ui_button_text_color", UiTokens.WHITE)
 	target.text = ""
+	var text_left := 14.0
+	if icon_texture != null:
+		var icon_size := minf(72.0, target.size.y - 24.0)
+		var icon := pixel_icon(
+			icon_texture,
+			Rect2(15, (target.size.y - icon_size) * 0.5, icon_size, icon_size)
+		)
+		target.add_child(icon)
+		text_left = 78.0
 
 	var title := label(
 		title_text,
-		30,
-		UiTokens.WHITE,
+		28 if icon_texture != null else 30,
+		text_color,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		UiTokens.FONT_BOLD
 	)
 	var content_height := 68.0
 	var content_top := floorf(maxf(8.0, (target.size.y - content_height) * 0.5))
-	title.position = Vector2(14, content_top)
-	title.size = Vector2(maxf(0.0, target.size.x - 28.0), 42)
+	title.position = Vector2(text_left, content_top)
+	title.size = Vector2(maxf(0.0, target.size.x - text_left - 12.0), 42)
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	target.add_child(title)
 
 	var caption_label := label(
 		caption,
 		18,
-		Color(1.0, 0.98, 0.94, 0.98),
+		Color(text_color, 0.88),
 		HORIZONTAL_ALIGNMENT_CENTER,
 		UiTokens.FONT_BOLD
 	)
-	caption_label.position = Vector2(14, content_top + 40.0)
-	caption_label.size = Vector2(maxf(0.0, target.size.x - 28.0), 28)
+	caption_label.position = Vector2(text_left, content_top + 40.0)
+	caption_label.size = Vector2(maxf(0.0, target.size.x - text_left - 12.0), 28)
 	caption_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	target.add_child(caption_label)
 

@@ -150,12 +150,9 @@ func _add_dragon_card(parent: Control, dragon: Dictionary, index: int) -> void:
 
 	var texture := GameState.dragon_texture(dragon)
 	if texture != null:
-		var portrait := WidgetFactory.texture_rect(
+		var portrait := WidgetFactory.dragon_presentation(
 			texture,
 			Rect2(25, 12, 255, 185),
-			TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		)
-		portrait.texture_filter = (
 			CanvasItem.TEXTURE_FILTER_LINEAR
 			if GameState.dragon_has_type(dragon, &"sunwing")
 			else CanvasItem.TEXTURE_FILTER_NEAREST
@@ -240,12 +237,9 @@ func _refresh_stone(stone: Control, dragon_id: String) -> void:
 	var dragon := GameState.get_dragon(dragon_id)
 	var texture := GameState.dragon_texture(dragon)
 	if texture != null:
-		var portrait := WidgetFactory.texture_rect(
+		var portrait := WidgetFactory.dragon_presentation(
 			texture,
 			Rect2(36, 0, 218, 190),
-			TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		)
-		portrait.texture_filter = (
 			CanvasItem.TEXTURE_FILTER_LINEAR
 			if GameState.dragon_has_type(dragon, &"sunwing")
 			else CanvasItem.TEXTURE_FILTER_NEAREST

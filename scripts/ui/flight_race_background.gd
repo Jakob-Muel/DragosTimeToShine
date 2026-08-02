@@ -1,12 +1,24 @@
 class_name FlightRaceBackground
 extends Control
 
+const LARGE_CLOUDS := [
+	preload("res://assets/art/ui_redesign/clouds/large_wide.png"),
+	preload("res://assets/art/ui_redesign/clouds/large_tall.png"),
+	preload("res://assets/art/ui_redesign/clouds/large_wisp.png"),
+]
+const SMALL_CLOUDS := [
+	preload("res://assets/art/ui_redesign/clouds/small_wide.png"),
+	preload("res://assets/art/ui_redesign/clouds/small_tall.png"),
+	preload("res://assets/art/ui_redesign/clouds/small_wisp.png"),
+]
+
 var scroll_speed := 185.0
 var scroll_offset := 0.0
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	set_process(true)
 	queue_redraw()
 
@@ -56,18 +68,9 @@ func _draw_cloud_layer() -> void:
 	for index in 5:
 		var x := shift + index * 360.0
 		var y := 180.0 + float(index % 3) * 170.0
-		_draw_cloud(Vector2(x, y), 0.72 + float(index % 2) * 0.14)
-
-
-func _draw_cloud(origin: Vector2, scale_factor: float) -> void:
-	var color := Color(1.0, 0.97, 0.84, 0.91)
-	draw_circle(origin + Vector2(58, 22) * scale_factor, 34 * scale_factor, color)
-	draw_circle(origin + Vector2(104, 5) * scale_factor, 46 * scale_factor, color)
-	draw_circle(origin + Vector2(150, 24) * scale_factor, 32 * scale_factor, color)
-	draw_rect(
-		Rect2(origin + Vector2(38, 22) * scale_factor, Vector2(142, 49) * scale_factor),
-		color
-	)
+		var cloud_set := LARGE_CLOUDS if index % 2 == 0 else SMALL_CLOUDS
+		var texture: Texture2D = cloud_set[index % cloud_set.size()]
+		draw_texture(texture, Vector2(x, y))
 
 
 func _draw_hills() -> void:

@@ -34,12 +34,11 @@ func build() -> void:
 	_build_brand(top_y)
 
 	var dragon_top := top_y + 216.0
-	var dragon := WidgetFactory.texture_rect(
+	var dragon := WidgetFactory.dragon_presentation(
 		DRAGON_TEXTURE,
 		Rect2(170, dragon_top, 380, 330),
-		TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		CanvasItem.TEXTURE_FILTER_LINEAR
 	)
-	dragon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(dragon)
 
 	var action_y := clampf(canvas_size.y - 420.0, 850.0, 1100.0)

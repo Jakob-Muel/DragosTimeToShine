@@ -61,8 +61,23 @@ func _run() -> void:
 		String(habitat_screen.get("active_island_texture").resource_path).ends_with("fire_island_hd.png"),
 		"The fire dragon must use its own island."
 	)
+	assert(
+		_contains_texture(habitat_screen, "sunberry.png"),
+		"Island care UI must use the production sunberry sprite."
+	)
+	assert(
+		_contains_texture(habitat_screen, "grooming_comb.png"),
+		"Island care UI must use the production grooming-comb sprite."
+	)
 
 	scene.call("_show_grooming")
+	var groom_screen: Control = scene.get("screen_router").active_screen
+	var groom_tool := groom_screen.get("groom_comb") as TextureRect
+	assert(groom_tool != null, "Grooming must use the texture-backed comb tool.")
+	assert(
+		String(groom_tool.texture.resource_path).ends_with("grooming_comb.png"),
+		"The draggable grooming tool must use the production comb sprite."
+	)
 	scene.call("debug_groom_stroke")
 	assert(scene.get("cleanliness") == 100.0)
 	assert(
@@ -81,6 +96,14 @@ func _run() -> void:
 	minigame.size = Vector2(720, 1100)
 	root.add_child(minigame)
 	await process_frame
+	var parallax_before := float(minigame.get("parallax_distance"))
+	minigame.call("_process", 1.0)
+	var parallax_delta := float(minigame.get("parallax_distance")) - parallax_before
+	assert(parallax_delta > 0.0, "Flight Training scenery must move even before the first flap.")
+	assert(
+		parallax_delta < 235.0,
+		"Flight Training scenery must move more slowly than foreground towers."
+	)
 	minigame.call("_spawn_obstacle_pair")
 	assert(minigame.get("obstacles").size() == 1, "Flight Training must spawn a top/bottom rock-spike pair.")
 	assert(
@@ -490,3 +513,14 @@ func _run() -> void:
 
 	print("Gameplay smoke test: valid")
 	quit()
+
+
+func _contains_texture(node: Node, path_suffix: String) -> bool:
+	if node is TextureRect:
+		var texture_rect := node as TextureRect
+		if texture_rect.texture != null and String(texture_rect.texture.resource_path).ends_with(path_suffix):
+			return true
+	for child in node.get_children():
+		if _contains_texture(child, path_suffix):
+			return true
+	return false

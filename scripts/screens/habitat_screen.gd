@@ -3,8 +3,10 @@ extends GameScreen
 const PIXEL_ART := preload("res://scripts/ui/pixel_art.gd")
 const DRAGON_TEXTURE := preload("res://assets/art/dragon_pink_hd.png")
 const ISLAND_TEXTURE := preload("res://assets/art/dragon_island_hd.png")
-const ICE_DRAGON_TEXTURE := preload("res://assets/art/ice/ice_dragon_hd.png")
+const ICE_DRAGON_TEXTURE := preload("res://assets/art/ice/ice_dragon_alpha.png")
 const ICE_ISLAND_TEXTURE := preload("res://assets/art/ice/ice_island_hd.png")
+const SUNBERRY_TEXTURE := preload("res://assets/art/ui_redesign/icons/sunberry.png")
+const GROOMING_COMB_TEXTURE := preload("res://assets/art/ui_redesign/icons/grooming_comb.png")
 const DRAGON_FOOT_ANCHOR := Vector2(105.0, 218.0)
 
 const PINK := UiTokens.PINK
@@ -22,8 +24,7 @@ var selected_dragon_id := "luma"
 var active_dragon_texture: Texture2D = DRAGON_TEXTURE
 var active_island_texture: Texture2D = ISLAND_TEXTURE
 var dragon_actor: Control
-var dragon_sprite: TextureRect
-var dragon_shadow: Control
+var dragon_presentation: Control
 var feed_button: Button
 var hunger_bar: ProgressBar
 var hunger_label: Label
@@ -51,15 +52,13 @@ var care_points: int:
 
 
 func _process(delta: float) -> void:
-	if not is_instance_valid(dragon_sprite):
+	if not is_instance_valid(dragon_presentation):
 		return
 	bob_time += delta
 	var amplitude := 11.0 if walking else 4.0
 	var speed := 13.0 if walking else 3.2
 	var bounce: float = abs(sin(bob_time * speed)) * amplitude
-	dragon_sprite.position.y = -bounce
-	if is_instance_valid(dragon_shadow):
-		dragon_shadow.squish = 1.0 - bounce / 55.0
+	dragon_presentation.call("set_bounce", bounce)
 
 
 func selected_dragon_data() -> Dictionary:
@@ -157,12 +156,10 @@ func build() -> void:
 	tip.add_theme_stylebox_override("panel", WidgetFactory.panel_style(Color(0.19, 0.13, 0.25, 0.88), INK, 12, 3))
 	add_child(tip)
 	var tip_text := WidgetFactory.label(tr_text("HABITAT_TIP_DYNAMIC", {"name": active_dragon_name}), 23, WHITE, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	tip_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 8)
+	tip_text.position = Vector2(62, 0)
+	tip_text.size = Vector2(412, 62)
 	tip.add_child(tip_text)
-	var tip_berry := PIXEL_ART.BerryPickup.new()
-	tip_berry.position = Vector2(14, -2)
-	tip_berry.size = Vector2(64, 64)
-	tip_berry.scale = Vector2(0.72, 0.72)
+	var tip_berry := WidgetFactory.pixel_icon(SUNBERRY_TEXTURE, Rect2(12, 7, 48, 48))
 	tip.add_child(tip_berry)
 
 	dragon_actor = Control.new()
@@ -172,15 +169,14 @@ func build() -> void:
 	dragon_actor.z_index = 650
 	add_child(dragon_actor)
 
-	dragon_shadow = PIXEL_ART.BlobShadow.new()
-	dragon_shadow.position = Vector2(30, 199)
-	dragon_shadow.size = Vector2(150, 38)
-	dragon_actor.add_child(dragon_shadow)
-
-	dragon_sprite = WidgetFactory.texture_rect(active_dragon_texture, Rect2(0, 0, 250, 224), TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
-	dragon_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if uses_pixel_filter else CanvasItem.TEXTURE_FILTER_LINEAR
-	dragon_sprite.pivot_offset = dragon_sprite.size / 2.0
-	dragon_actor.add_child(dragon_sprite)
+	dragon_presentation = WidgetFactory.dragon_presentation(
+		active_dragon_texture,
+		Rect2(0, 0, 250, 224),
+		CanvasItem.TEXTURE_FILTER_NEAREST
+		if uses_pixel_filter
+		else CanvasItem.TEXTURE_FILTER_LINEAR
+	)
+	dragon_actor.add_child(dragon_presentation)
 
 	var bottom := Panel.new()
 	bottom.position = Vector2(24, canvas_size.y - 456)
@@ -198,8 +194,10 @@ func build() -> void:
 	mood.size = Vector2(288, 40)
 	bottom.add_child(mood)
 
+	var hunger_icon := WidgetFactory.pixel_icon(SUNBERRY_TEXTURE, Rect2(24, 61, 30, 30))
+	bottom.add_child(hunger_icon)
 	var hunger_title := WidgetFactory.label(tr_text("HUNGER"), 21, INK_SOFT, HORIZONTAL_ALIGNMENT_LEFT, FONT_BOLD)
-	hunger_title.position = Vector2(26, 64)
+	hunger_title.position = Vector2(62, 64)
 	hunger_title.size = Vector2(140, 30)
 	bottom.add_child(hunger_title)
 	hunger_label = WidgetFactory.label("%d%%" % hunger, 21, INK, HORIZONTAL_ALIGNMENT_RIGHT, FONT_BOLD)
@@ -215,8 +213,10 @@ func build() -> void:
 	hunger_bar.add_theme_stylebox_override("fill", WidgetFactory.panel_style(GOLD, INK, 8, 0))
 	bottom.add_child(hunger_bar)
 
+	var clean_icon := WidgetFactory.pixel_icon(GROOMING_COMB_TEXTURE, Rect2(22, 143, 34, 28))
+	bottom.add_child(clean_icon)
 	var clean_title := WidgetFactory.label(tr_text("CLEAN"), 21, INK_SOFT, HORIZONTAL_ALIGNMENT_LEFT, FONT_BOLD)
-	clean_title.position = Vector2(26, 145)
+	clean_title.position = Vector2(62, 145)
 	clean_title.size = Vector2(140, 30)
 	bottom.add_child(clean_title)
 	clean_label = WidgetFactory.label("%d%%" % floori(cleanliness), 21, INK, HORIZONTAL_ALIGNMENT_RIGHT, FONT_BOLD)
@@ -240,16 +240,26 @@ func build() -> void:
 	inventory.position = Vector2(350, 229)
 	inventory.size = Vector2(288, 32)
 	bottom.add_child(inventory)
+	var action_divider := ColorRect.new()
+	action_divider.position = Vector2(26, 260)
+	action_divider.size = Vector2(612, 3)
+	action_divider.color = Color(INK, 0.18)
+	action_divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom.add_child(action_divider)
 
 	feed_button = WidgetFactory.button(tr_text("FEED"), Rect2(26, 276, 294, 108), PINK, PINK_DARK)
 	feed_button.pressed.connect(_feed_dragon)
 	bottom.add_child(feed_button)
-	WidgetFactory.add_button_caption(feed_button, tr_text("FEED_CAPTION"))
+	WidgetFactory.add_button_caption(feed_button, tr_text("FEED_CAPTION"), SUNBERRY_TEXTURE)
 
 	groom_button = WidgetFactory.button(tr_text("GROOM"), Rect2(344, 276, 294, 108), Color("#8ed5aa"), Color("#4d9a70"))
 	groom_button.pressed.connect(_go_groom)
 	bottom.add_child(groom_button)
-	WidgetFactory.add_button_caption(groom_button, tr_text("GROOM_CAPTION_DYNAMIC", {"name": active_dragon_name}))
+	WidgetFactory.add_button_caption(
+		groom_button,
+		tr_text("GROOM_CAPTION_DYNAMIC", {"name": active_dragon_name}),
+		GROOMING_COMB_TEXTURE
+	)
 
 
 func _dragon_accent_color(dragon: Dictionary) -> Color:
@@ -314,9 +324,10 @@ func _feed_dragon() -> void:
 		random.randf_range(155.0, 565.0),
 		random.randf_range(500.0 + island_vertical_offset(), 790.0 + island_vertical_offset())
 	)
-	var berry := PIXEL_ART.BerryPickup.new()
-	berry.size = Vector2(64, 64)
-	berry.position = target - Vector2(32, 210)
+	var berry := WidgetFactory.pixel_icon(
+		SUNBERRY_TEXTURE,
+		Rect2(target - Vector2(32, 210), Vector2(64, 64))
+	)
 	berry.scale = Vector2(0.25, 0.25)
 	berry.z_index = int(target.y) - 1
 	add_child(berry)

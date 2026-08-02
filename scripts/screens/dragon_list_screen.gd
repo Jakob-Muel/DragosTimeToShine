@@ -107,12 +107,9 @@ func build() -> void:
 			)
 		)
 		card.add_child(portrait_back)
-		var portrait := WidgetFactory.texture_rect(
+		var portrait := WidgetFactory.dragon_presentation(
 			dragon_texture,
 			Rect2(20, 5, portrait_back.size.x - 40.0, 230),
-			TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		)
-		portrait.texture_filter = (
 			CanvasItem.TEXTURE_FILTER_NEAREST
 			if uses_pixel_filter
 			else CanvasItem.TEXTURE_FILTER_LINEAR

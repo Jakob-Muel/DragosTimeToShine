@@ -5,6 +5,17 @@ signal run_finished(score: int, completed: bool)
 
 const DRAGON_TEXTURE := preload("res://assets/art/flight/flight_dragon.png")
 const FLIGHT_PILLAR := preload("res://scripts/ui/flight_pillar.gd")
+const LARGE_CLOUDS := [
+	preload("res://assets/art/ui_redesign/clouds/large_wide.png"),
+	preload("res://assets/art/ui_redesign/clouds/large_tall.png"),
+	preload("res://assets/art/ui_redesign/clouds/large_wisp.png"),
+]
+const SMALL_CLOUDS := [
+	preload("res://assets/art/ui_redesign/clouds/small_wide.png"),
+	preload("res://assets/art/ui_redesign/clouds/small_tall.png"),
+	preload("res://assets/art/ui_redesign/clouds/small_wisp.png"),
+]
+const LANDSCAPE := preload("res://assets/art/ui_redesign/flight_environment/landscape.png")
 const DRAGON_SIZE := Vector2(156, 98)
 const DRAGON_X := 105.0
 const GRAVITY := 820.0
@@ -25,6 +36,9 @@ const GAP_CENTER_MIN_DELTA_START := 75.0
 const GAP_CENTER_MIN_DELTA_MAX := 150.0
 const GAP_CENTER_MIN_DELTA_INCREASE := 15.0
 const GAP_CENTER_MIN_DELTA_SCORE_INTERVAL := 5
+const CLOUD_FAR_SPEED := 10.0
+const CLOUD_NEAR_SPEED := 18.0
+const LANDSCAPE_SPEED := 40.0
 
 var dragon: TextureRect
 var velocity_y := 0.0
@@ -37,11 +51,16 @@ var random := RandomNumberGenerator.new()
 var dragon_texture: Texture2D = DRAGON_TEXTURE
 var last_gap_center := 0.0
 var obstacle_serial := 0
+var parallax_distance := 0.0
+var cloud_far_offset := 0.0
+var cloud_near_offset := 0.0
+var landscape_offset := 0.0
 
 
 func _ready() -> void:
 	random.randomize()
 	clip_contents = true
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	dragon = TextureRect.new()
@@ -61,6 +80,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if not finished:
+		_advance_background(delta)
 	if not running or finished:
 		return
 	velocity_y += GRAVITY * delta
@@ -85,8 +106,8 @@ func _process(delta: float) -> void:
 		var top_height := float(obstacle["top_height"])
 		var gap_height := float(obstacle.get("gap_height", GAP_HEIGHT_START))
 		var gap_bottom := top_height + gap_height
-		# The rock art tapers sharply toward the gap, so a narrow central hitbox
-		# avoids collisions with transparent corners and slightly grazed edges.
+		# Keep a forgiving inner collision lane even though the new ruined caps
+		# have a broader, clearer silhouette than the old needle-like peaks.
 		var top_hitbox := Rect2(root.position + Vector2(30, 0), Vector2(OBSTACLE_WIDTH - 60, maxf(0.0, top_height - 24)))
 		var bottom_hitbox := Rect2(
 			root.position + Vector2(30, gap_bottom + 24),
@@ -128,6 +149,17 @@ func _move_obstacles(delta: float) -> void:
 		if root.position.x + OBSTACLE_WIDTH < -20.0:
 			root.queue_free()
 			obstacles.remove_at(index)
+
+
+func _advance_background(delta: float) -> void:
+	parallax_distance += LANDSCAPE_SPEED * delta
+	cloud_far_offset = fmod(cloud_far_offset + CLOUD_FAR_SPEED * delta, 360.0)
+	cloud_near_offset = fmod(cloud_near_offset + CLOUD_NEAR_SPEED * delta, 520.0)
+	landscape_offset = fmod(
+		landscape_offset + LANDSCAPE_SPEED * delta,
+		float(LANDSCAPE.get_width())
+	)
+	queue_redraw()
 
 
 func _spawn_obstacle_pair() -> void:
@@ -268,16 +300,43 @@ func debug_show_obstacle() -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("#75d8f2"))
-	draw_rect(Rect2(0, size.y * 0.82, size.x, size.y * 0.18), Color("#a8e57b"))
-	draw_rect(Rect2(0, size.y * 0.82, size.x, 7), Color("#2f2140"))
-	_draw_cloud(Vector2(70, 115), 0.9)
-	_draw_cloud(Vector2(size.x - 260, 330), 0.65)
-	_draw_cloud(Vector2(250, size.y * 0.68), 0.5)
+	_draw_banded_sky()
+	_draw_cloud_track(SMALL_CLOUDS, 110.0, cloud_far_offset, 360.0)
+	_draw_cloud_track(LARGE_CLOUDS, 265.0, cloud_near_offset, 520.0)
+
+	_draw_tiled_layer(LANDSCAPE, size.y - LANDSCAPE.get_height(), landscape_offset)
 
 
-func _draw_cloud(origin: Vector2, scale_factor: float) -> void:
-	var cloud_color := Color(1.0, 0.95, 0.79, 0.88)
-	draw_rect(Rect2(origin + Vector2(24, 0) * scale_factor, Vector2(104, 34) * scale_factor), cloud_color)
-	draw_rect(Rect2(origin + Vector2(0, 27) * scale_factor, Vector2(166, 42) * scale_factor), cloud_color)
-	draw_rect(Rect2(origin + Vector2(31, 63) * scale_factor, Vector2(108, 12) * scale_factor), Color("#efcf9c"))
+func _draw_banded_sky() -> void:
+	var band_height := size.y / 5.0
+	var colors := [
+		Color("#4fb3d0"),
+		Color("#78d6ed"),
+		Color("#78d6ed"),
+		Color("#a8e6f5"),
+		Color("#dff3ef"),
+	]
+	for index in colors.size():
+		draw_rect(Rect2(0, band_height * index, size.x, band_height + 1.0), colors[index])
+
+
+func _draw_cloud_track(
+	textures: Array,
+	base_y: float,
+	offset: float,
+	spacing: float
+) -> void:
+	var shift := fposmod(-offset, spacing) - spacing
+	var count := ceili(size.x / spacing) + 3
+	for index in count:
+		var texture: Texture2D = textures[index % textures.size()]
+		var y_offset := float((index * 2 + 1) % 3) * 64.0
+		draw_texture(texture, Vector2(shift + index * spacing, base_y + y_offset))
+
+
+func _draw_tiled_layer(texture: Texture2D, y: float, offset: float) -> void:
+	var tile_width := float(texture.get_width())
+	var shift := fposmod(-offset, tile_width) - tile_width
+	var count := ceili(size.x / tile_width) + 2
+	for index in count:
+		draw_texture(texture, Vector2(shift + index * tile_width, y))

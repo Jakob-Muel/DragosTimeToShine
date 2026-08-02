@@ -48,8 +48,33 @@ func _assert_screen_inside_safe_area(scene_path: String) -> void:
 			rect.end.y <= SHORT_PHONE_SIZE.y - HOME_INDICATOR_INSET,
 			"A button must not enter the home-indicator safe area."
 		)
+		_assert_pixel_button_style(button)
 
 	screen.queue_free()
+
+
+func _assert_pixel_button_style(button: Button) -> void:
+	var normal_style := button.get_theme_stylebox("normal")
+	var pressed_style := button.get_theme_stylebox("pressed")
+	assert(normal_style is StyleBoxTexture, "Buttons must use pixel-art texture frames.")
+	assert(pressed_style is StyleBoxTexture, "Pressed buttons must use pixel-art texture frames.")
+	assert(normal_style.texture != null, "Normal button art must load.")
+	assert(pressed_style.texture != null, "Pressed button art must load.")
+	assert(normal_style.texture != pressed_style.texture, "Pressed buttons need a distinct frame.")
+	assert(
+		button.texture_filter == CanvasItem.TEXTURE_FILTER_NEAREST,
+		"Pixel-art buttons must use nearest-neighbour filtering."
+	)
+	if button.get_meta("ui_small_button_kind", "") == "back":
+		assert(button.text.is_empty(), "Back buttons must not render a font chevron.")
+		var chevron := button.get_node_or_null("PixelChevron") as Control
+		assert(chevron != null, "Back buttons must use the shared pixel chevron.")
+		assert(chevron.size == button.size, "The pixel chevron must center within the full button.")
+	elif button.get_meta("ui_small_button_kind", "") == "settings":
+		assert(button.text.is_empty(), "Settings buttons must not render a font gear.")
+		var gear := button.get_node_or_null("PixelGear") as Control
+		assert(gear != null, "Settings buttons must use the shared pixel gear.")
+		assert(gear.size == button.size, "The pixel gear must center within the full button.")
 
 
 func _collect_buttons(node: Node, result: Array[Button]) -> void:

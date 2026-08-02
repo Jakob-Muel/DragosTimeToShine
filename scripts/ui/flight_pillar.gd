@@ -1,7 +1,7 @@
 class_name FlightPillar
 extends Control
 
-const NATURAL_PEAK_HEIGHT := 250.0
+const NATURAL_PEAK_HEIGHT := 86.0
 
 var flip_vertical := false
 var variant := 0
@@ -86,116 +86,90 @@ func _draw_peak(
 	mid: Color,
 	light: Color
 ) -> void:
+	# A broad ruined battlement replaces the old 250px needle. The gap-facing
+	# edge varies by only a few pixels, so its visual boundary stays readable.
 	var outer_points := PackedVector2Array([
 		Vector2(8, 0),
 		Vector2(110, 0),
-		Vector2(110, 15),
-		Vector2(104, 15),
-		Vector2(104, 35),
-		Vector2(98, 35),
-		Vector2(98, 58),
-		Vector2(91, 58),
-		Vector2(91, 82),
-		Vector2(84, 82),
-		Vector2(84, 108),
-		Vector2(77, 108),
-		Vector2(77, 137),
-		Vector2(70, 137),
-		Vector2(70, 169),
-		Vector2(64, 169),
-		Vector2(59, 250),
-		Vector2(53, 169),
-		Vector2(47, 169),
-		Vector2(47, 137),
-		Vector2(40, 137),
-		Vector2(40, 108),
-		Vector2(33, 108),
-		Vector2(33, 82),
-		Vector2(26, 82),
-		Vector2(26, 58),
-		Vector2(19, 58),
-		Vector2(19, 35),
-		Vector2(13, 35),
-		Vector2(13, 15),
-		Vector2(8, 15),
+		Vector2(116, 14),
+		Vector2(116, 62),
+		Vector2(110, 62),
+		Vector2(110, 78),
+		Vector2(89, 78),
+		Vector2(89, 69),
+		Vector2(68, 69),
+		Vector2(68, 78),
+		Vector2(46, 78),
+		Vector2(46, 72),
+		Vector2(25, 72),
+		Vector2(25, 78),
+		Vector2(7, 78),
+		Vector2(7, 64),
+		Vector2(2, 64),
+		Vector2(2, 14),
 	])
 	draw_colored_polygon(_map_peak_points(outer_points, peak_height), dark)
 
 	var face_points := PackedVector2Array([
-		Vector2(14, 6),
-		Vector2(104, 6),
-		Vector2(104, 18),
-		Vector2(98, 18),
-		Vector2(98, 39),
-		Vector2(91, 39),
-		Vector2(91, 62),
-		Vector2(84, 62),
-		Vector2(84, 87),
-		Vector2(77, 87),
-		Vector2(77, 114),
-		Vector2(70, 114),
-		Vector2(70, 144),
-		Vector2(64, 144),
-		Vector2(59, 229),
-		Vector2(54, 144),
-		Vector2(48, 144),
-		Vector2(48, 114),
-		Vector2(41, 114),
-		Vector2(41, 87),
-		Vector2(34, 87),
-		Vector2(34, 62),
-		Vector2(27, 62),
-		Vector2(27, 39),
-		Vector2(20, 39),
-		Vector2(20, 18),
-		Vector2(14, 18),
+		Vector2(13, 6),
+		Vector2(105, 6),
+		Vector2(110, 17),
+		Vector2(110, 57),
+		Vector2(104, 57),
+		Vector2(104, 70),
+		Vector2(95, 70),
+		Vector2(95, 61),
+		Vector2(63, 61),
+		Vector2(63, 70),
+		Vector2(51, 70),
+		Vector2(51, 64),
+		Vector2(31, 64),
+		Vector2(31, 70),
+		Vector2(13, 70),
+		Vector2(13, 58),
+		Vector2(8, 58),
+		Vector2(8, 18),
 	])
 	draw_colored_polygon(_map_peak_points(face_points, peak_height), mid)
 
 	var highlight_facet := PackedVector2Array([
-		Vector2(18, 10),
-		Vector2(57, 10),
-		Vector2(50, 42),
-		Vector2(38, 72),
-		Vector2(30, 52),
-		Vector2(24, 28),
+		Vector2(15, 10),
+		Vector2(54, 10),
+		Vector2(49, 28),
+		Vector2(15, 28),
 	])
 	draw_colored_polygon(_map_peak_points(highlight_facet, peak_height), light)
 
 	var shadow_facet := PackedVector2Array([
-		Vector2(61, 8),
-		Vector2(100, 8),
-		Vector2(94, 42),
-		Vector2(83, 75),
-		Vector2(73, 118),
-		Vector2(64, 169),
-		Vector2(59, 221),
-		Vector2(57, 88),
+		Vector2(62, 9),
+		Vector2(102, 9),
+		Vector2(106, 20),
+		Vector2(106, 54),
+		Vector2(91, 54),
+		Vector2(91, 60),
+		Vector2(67, 60),
 	])
 	draw_colored_polygon(_map_peak_points(shadow_facet, peak_height), shadow)
 
-	var center_facet := PackedVector2Array([
-		Vector2(53, 20),
-		Vector2(66, 17),
-		Vector2(70, 52),
-		Vector2(62, 91),
-		Vector2(58, 154),
-		Vector2(51, 104),
-		Vector2(45, 68),
+	var center_block := PackedVector2Array([
+		Vector2(43, 31),
+		Vector2(79, 31),
+		Vector2(79, 55),
+		Vector2(43, 55),
 	])
-	draw_colored_polygon(_map_peak_points(center_facet, peak_height), mid.lightened(0.10))
-
-	_draw_peak_crack(
-		[Vector2(32, 38), Vector2(47, 52), Vector2(42, 76), Vector2(54, 91)],
-		peak_height,
-		dark
+	draw_colored_polygon(_map_peak_points(center_block, peak_height), mid.lightened(0.10))
+	var seam := _map_peak_points(
+		PackedVector2Array([Vector2(9, 31), Vector2(110, 31)]),
+		peak_height
 	)
-	_draw_peak_crack(
-		[Vector2(84, 51), Vector2(70, 65), Vector2(74, 91), Vector2(64, 111)],
-		peak_height,
-		dark
-	)
-	_draw_peak_crystals(peak_height)
+	draw_line(seam[0], seam[1], dark, 4.0, false)
+	var crystal := PackedVector2Array([
+		Vector2(82, 52),
+		Vector2(88, 39),
+		Vector2(95, 52),
+		Vector2(90, 61),
+	])
+	draw_colored_polygon(_map_peak_points(crystal, peak_height), Color("#d85b96"))
 
 
 func _map_peak_points(points: PackedVector2Array, peak_height: float) -> PackedVector2Array:
@@ -206,44 +180,6 @@ func _map_peak_points(points: PackedVector2Array, peak_height: float) -> PackedV
 		var y := peak_height - depth if flip_vertical else size.y - peak_height + depth
 		mapped.append(Vector2(point.x, y))
 	return mapped
-
-
-func _draw_peak_crack(
-	points: Array[Vector2],
-	peak_height: float,
-	color: Color
-) -> void:
-	var mapped := _map_peak_points(PackedVector2Array(points), peak_height)
-	for index in mapped.size() - 1:
-		draw_line(mapped[index], mapped[index + 1], color, 3.0, false)
-
-
-func _draw_peak_crystals(peak_height: float) -> void:
-	var clusters: Array[PackedVector2Array] = [
-		PackedVector2Array([
-			Vector2(23, 73),
-			Vector2(29, 59),
-			Vector2(35, 73),
-			Vector2(30, 86),
-		]),
-		PackedVector2Array([
-			Vector2(78, 116),
-			Vector2(83, 101),
-			Vector2(89, 116),
-			Vector2(84, 130),
-		]),
-		PackedVector2Array([
-			Vector2(52, 143),
-			Vector2(57, 128),
-			Vector2(63, 143),
-			Vector2(58, 158),
-		]),
-	]
-	for index in clusters.size():
-		var crystal := _map_peak_points(clusters[index], peak_height)
-		draw_colored_polygon(crystal, Color("#9a3566"))
-		var center := crystal[1].lerp(crystal[3], 0.48)
-		draw_rect(Rect2(center - Vector2(2, 3), Vector2(4, 7)), Color("#ff9bc3"))
 
 
 func _draw_stone_row(

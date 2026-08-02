@@ -2,7 +2,8 @@ extends GameScreen
 
 const PIXEL_ART := preload("res://scripts/ui/pixel_art.gd")
 const DRAGON_TEXTURE := preload("res://assets/art/dragon_pink_hd.png")
-const ICE_DRAGON_TEXTURE := preload("res://assets/art/ice/ice_dragon_hd.png")
+const ICE_DRAGON_TEXTURE := preload("res://assets/art/ice/ice_dragon_alpha.png")
+const GROOMING_COMB_TEXTURE := preload("res://assets/art/ui_redesign/icons/grooming_comb.png")
 const GROOM_CLEAN_PER_PIXEL := 0.008
 
 const PINK := UiTokens.PINK
@@ -180,9 +181,10 @@ func build() -> void:
 	groom_area.gui_input.connect(_on_groom_input)
 	add_child(groom_area)
 
-	groom_comb = PIXEL_ART.PixelComb.new()
-	groom_comb.position = Vector2(groom_area.size.x - 112.0, groom_area.size.y - 104.0)
-	groom_comb.size = Vector2(96, 80)
+	groom_comb = WidgetFactory.pixel_icon(
+		GROOMING_COMB_TEXTURE,
+		Rect2(groom_area.size.x - 112.0, groom_area.size.y - 104.0, 96, 80)
+	)
 	groom_comb.z_index = 1
 	groom_area.add_child(groom_comb)
 
