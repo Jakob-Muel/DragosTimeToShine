@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="DragonDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dragon_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"voltara"
+name_key = &"FUSION_DRAGON_NAME"
+types = Array[StringName]([&"fire", &"water"])
+egg_kind = &"fusion"
+egg_name_key = &"FUSION_EGG_NAME"
+hatch_message_key = &"FUSION_HATCHED_MESSAGE"
+level_species_key = &"FUSION_LEVEL_SPECIES"
+egg_texture_path = "res://assets/art/fusion/fusion_egg.png"
+dragon_texture_path = "res://assets/art/fusion/voltara_dragon_hd.png"
+island_texture_path = "res://assets/art/fusion/voltara_island_hd.png"
+flight_texture_path = "res://assets/art/flight/dragons/voltara_flight.png"

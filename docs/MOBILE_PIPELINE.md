@@ -41,16 +41,24 @@ documents the packaging model.
 Prerequisites: macOS, Xcode, Godot export templates, an Apple developer team, a unique
 bundle identifier, and an iPhone with Developer Mode enabled.
 
-1. Fully quit and reopen Godot after pulling export-preset changes, then set the Team
+1. Install Godot 4.6.1 and its official export templates. On a new Mac, run
+   `tools/repair_godot_ios_template.sh` once to add the missing arm64 Simulator
+   engine slices. The script keeps the official archive as a backup.
+2. Fully quit and reopen Godot after pulling export-preset changes, then set the Team
    ID and bundle identifier in the iOS preset.
-2. Run `tools/export_ios.sh debug`. This writes to `build/ios` and verifies the
-   signed app still contains the HealthKit entitlement, privacy text, and plugin.
-3. Open the generated `.xcodeproj` in Xcode.
-4. Confirm the generated target shows the **HealthKit** capability. The export
+3. Export normally with Godot's **Export Project** button, or run
+   `tools/export_ios.sh debug` for the guarded path. The guarded export validates the
+   signed device app, HealthKit configuration, native plugin, Apple frameworks, and
+   an unsigned arm64 Simulator build.
+4. Open the generated `.xcodeproj` in Xcode.
+5. Confirm the generated target shows the **HealthKit** capability. The export
    preset supplies it, so it should not need to be added manually.
-5. Confirm `NSHealthShareUsageDescription` is present in the generated Info.plist.
-6. Choose the connected iPhone and run once from Xcode so signing/provisioning settles.
-7. Handle the step-read sheet when the egg screen requests it, then test denial, approval,
+6. Confirm `NSHealthShareUsageDescription` and `NSHealthUpdateUsageDescription` are
+   present in the generated Info.plist. The update description is required by App
+   Store validation even though the current plugin only reads step counts.
+7. Choose the connected iPhone or any arm64 Simulator and press Run. No linker-setting
+   edits should be necessary in Xcode.
+8. Handle the step-read sheet when the egg screen requests it, then test denial, approval,
    app restart, and a real walking session.
 
 Godot's [iOS export guide](https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_ios.html)

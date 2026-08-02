@@ -15,14 +15,20 @@ A mobile-first Godot 4.6 proof of concept for a cozy dragon care game.
    adds one Flight Level, and training continues until Luma hits an obstacle.
 6. Reach Flight Level 5 to unlock the **Flight Contest**. The selected dragon
    then glides 50 metres and wins one gold coin.
-7. Open **Shop** and spend one gold coin on a **Frost Crystal Egg**. Start
-   incubation and walk 1,000 steps to hatch Frost, an ice dragon. Desktop/web
-   builds provide a test-step button.
-8. Select Frost in the den to visit a dedicated snow-and-crystal island. Care,
-   grooming, flight XP, and contest progress remain attached to the selected
-   dragon.
+7. Open **Shop** and spend one gold coin on either an **Ember Egg** or a
+   **Tidal Egg**. Start incubation and walk 1,000 steps to hatch Ember, a fire
+   dragon, or Marina, a water dragon. Desktop/web builds provide a test-step
+   button.
+8. Select the new dragon in the den to visit its dedicated volcanic or water
+   island. Care, grooming, flight XP, and contest progress remain attached to
+   the selected dragon.
 
 Game state is saved locally between sessions.
+
+Use the gear button on the main menu to open **Settings**, switch between
+English and German, or reset all game progress after a confirmation step.
+Loading an older save also removes duplicate dragon types while retaining the
+starter and the highest care and training values.
 
 ## Run
 
@@ -45,6 +51,12 @@ The responsive layouts are tested at 750×1334 (iPhone SE), 1179×2556
 Android). Android and iOS export presets are included; platform signing and
 toolchains still need to be configured on the export machine.
 
+For iOS, install Godot 4.6.1 and its export templates, then run
+`tools/repair_godot_ios_template.sh` once on a new Mac. After that, Godot's normal
+**Export Project** flow produces an Xcode project that builds for both an arm64 iPhone
+and an arm64 Simulator without manual linker edits. Use `tools/export_ios.sh debug`
+when you also want the full device-and-Simulator validation pass.
+
 ## Project documentation
 
 - [Intended gameplay loop and progression](docs/GAMEPLAY_LOOP.md)
@@ -54,11 +66,15 @@ toolchains still need to be configured on the export machine.
 - [Native iOS/Android build pipeline](docs/MOBILE_PIPELINE.md)
 - [Step-counter plugin contract](native/README.md)
 
-Run the gameplay smoke test without opening a window:
+Run the gameplay and domain tests without opening a window:
 
 ```sh
 /Applications/Godot.app/Contents/MacOS/Godot \
   --headless --path . --script tests/smoke_test.gd
+/Applications/Godot.app/Contents/MacOS/Godot \
+  --headless --path . --script tests/domain_test.gd
+/Applications/Godot.app/Contents/MacOS/Godot \
+  --headless --path . --script tests/screen_routing_test.gd
 ```
 
 ## Installable Web App

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="DragonDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dragon_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"frost"
+name_key = &"ICE_DRAGON_NAME"
+types = Array[StringName]([&"ice"])
+egg_kind = &"ice"
+egg_name_key = &"ICE_EGG_NAME"
+hatch_message_key = &"ICE_HATCHED_MESSAGE"
+level_species_key = &"ICE_LEVEL_SPECIES"
+egg_texture_path = "res://assets/art/ice/ice_egg.png"
+dragon_texture_path = "res://assets/art/ice/ice_dragon_hd.png"
+island_texture_path = "res://assets/art/ice/ice_island_hd.png"
+flight_texture_path = "res://assets/art/flight/dragons/frost_flight.png"

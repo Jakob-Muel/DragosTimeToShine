@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="DragonDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dragon_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"nova"
+name_key = &"HATCHED_DRAGON_NAME"
+types = Array[StringName]([&"sunwing"])
+egg_kind = &"sunwing"
+egg_name_key = &"EGG_NAME"
+hatch_message_key = &"HATCHED_MESSAGE"
+level_species_key = &"LEVEL_SPECIES"
+dragon_texture_path = "res://assets/art/dragon_pink_hd.png"
+island_texture_path = "res://assets/art/dragon_island_hd.png"
+flight_texture_path = "res://assets/art/flight/flight_dragon.png"

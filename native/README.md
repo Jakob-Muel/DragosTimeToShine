@@ -61,14 +61,29 @@ tools/export_ios.sh debug
 ```
 
 The command writes to `build/ios/DragosTimeToShine.ipa` and fails if the final
-signed app is missing the HealthKit entitlement, privacy explanation, or plugin
-registration. Use `release` instead of `debug` for a distribution export.
+signed app is missing the HealthKit entitlement, read/update privacy explanations,
+or plugin registration. App Store validation requires both explanations even though
+the current plugin only reads step counts. Use `release` instead of `debug` for a
+distribution export.
 
 ## Rebuilding the plugin
 
 The checked-in frameworks target Godot 4.6.1 (`14d19694`), iOS 17+, arm64 iPhone,
 and arm64 Apple-silicon Simulator. Plugins must be rebuilt when the Godot engine
 version changes.
+
+The official Godot 4.6.1 and 4.6.3 iOS template archives incorrectly advertise an
+arm64 Simulator slice while shipping an x86_64-only `libgodot.a`. On a new Mac,
+install the official Godot 4.6.1 export templates, then repair the iOS template once:
+
+```sh
+tools/repair_godot_ios_template.sh
+```
+
+The script downloads checksum-verified Godot 4.6.1 source, builds the missing debug
+and release arm64 Simulator libraries, combines them with the official x86_64 slices,
+and installs the corrected `ios.zip` in Godot's user template directory. It preserves
+the original as `ios.official-x86_64-only.zip`.
 
 1. Check out the matching Godot source and generate its iOS headers with SCons.
 2. Run:

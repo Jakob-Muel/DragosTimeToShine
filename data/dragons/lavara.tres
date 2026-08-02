@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="DragonDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dragon_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"lavara"
+name_key = &"LAVA_DRAGON_NAME"
+types = Array[StringName]([&"fire", &"earth"])
+egg_kind = &"fusion"
+egg_name_key = &"LAVA_FUSION_EGG_NAME"
+hatch_message_key = &"LAVA_HATCHED_MESSAGE"
+level_species_key = &"LAVA_LEVEL_SPECIES"
+egg_texture_path = "res://assets/art/fusion/lava/lavara_egg.png"
+dragon_texture_path = "res://assets/art/fusion/lava/lavara_dragon_hd.png"
+island_texture_path = "res://assets/art/fusion/lava/lavara_island_hd.png"
+flight_texture_path = "res://assets/art/flight/dragons/lavara_flight.png"

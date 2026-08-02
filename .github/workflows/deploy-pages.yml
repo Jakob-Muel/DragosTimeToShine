@@ -85,6 +85,16 @@ jobs:
           "$HOME/.cache/dragos-godot/godot" \
             --headless --path . --script tests/smoke_test.gd
 
+      - name: Run domain rules test
+        run: |
+          "$HOME/.cache/dragos-godot/godot" \
+            --headless --path . --script tests/domain_test.gd
+
+      - name: Run screen routing test
+        run: |
+          "$HOME/.cache/dragos-godot/godot" \
+            --headless --path . --script tests/screen_routing_test.gd
+
       - name: Export installable web app
         run: |
           mkdir -p build/web

@@ -12,28 +12,48 @@ class PixelSky:
 		queue_redraw()
 
 	func _draw() -> void:
-		draw_rect(Rect2(Vector2.ZERO, size), Color("#75d8f2"))
-		draw_rect(Rect2(0, size.y * 0.69, size.x, size.y * 0.31), Color("#b7e888"))
-		draw_rect(Rect2(0, size.y * 0.69, size.x, 8), Color("#2f2140"))
-		_draw_cloud(Vector2(52, 172), 1.0)
-		_draw_cloud(Vector2(485, 260), 0.8)
-		_draw_cloud(Vector2(115, 510), 0.55)
-		for x in range(24, int(size.x), 64):
-			var y := int(size.y * 0.73) + (x * 17) % 205
-			draw_rect(Rect2(x, y, 8, 18), Color("#65bb65"))
-			draw_rect(Rect2(x - 4, y + 7, 4, 5), Color("#65bb65"))
-			draw_rect(Rect2(x + 8, y + 4, 4, 5), Color("#65bb65"))
+		# Deliberately visible color bands and stepped clouds keep utility
+		# screens in the same pixel-art world as the islands.
+		var band_count := 12
+		var band_height := size.y / float(band_count)
+		var sky_top := Color("#75d4ec")
+		var sky_bottom := Color("#b9e8e7")
+		for band in band_count:
+			var amount := float(band) / float(band_count - 1)
+			draw_rect(
+				Rect2(0, band * band_height, size.x, band_height + 1.0),
+				sky_top.lerp(sky_bottom, amount)
+			)
+
+		_draw_cloud(Vector2(42, 225), 1.0)
+		_draw_cloud(Vector2(548, 376), 0.72)
+		_draw_cloud(Vector2(72, size.y * 0.57), 0.62)
+		_draw_cloud(Vector2(-72, size.y - 134), 1.2)
+		_draw_cloud(Vector2(548, size.y - 196), 0.92)
 
 	func _draw_cloud(origin: Vector2, scale_factor: float) -> void:
+		var shadow := Color(0.79, 0.77, 0.67, 0.28)
+		var paper := Color(1.0, 0.97, 0.84, 0.86)
 		var blocks := [
-			Rect2(30, 0, 90, 32),
-			Rect2(0, 28, 166, 42),
-			Rect2(22, 62, 120, 18),
+			Rect2(48, 0, 64, 16),
+			Rect2(24, 16, 112, 24),
+			Rect2(8, 40, 152, 32),
+			Rect2(0, 48, 176, 18),
+			Rect2(24, 72, 128, 12),
 		]
 		for block in blocks:
-			var scaled := Rect2(origin + block.position * scale_factor, block.size * scale_factor)
-			draw_rect(scaled, Color("#fff1c9"))
-			draw_rect(Rect2(scaled.position + Vector2(0, scaled.size.y - 6), Vector2(scaled.size.x, 6)), Color("#efcf9c"))
+			draw_rect(
+				Rect2(
+					origin + (block.position + Vector2(0, 8)) * scale_factor,
+					block.size * scale_factor
+				),
+				shadow
+			)
+		for block in blocks:
+			draw_rect(
+				Rect2(origin + block.position * scale_factor, block.size * scale_factor),
+				paper
+			)
 
 
 class BlobShadow:
@@ -173,57 +193,6 @@ class PixelEgg:
 		draw_circle(Vector2(size.x * 0.55, size.y * 0.27), size.x * 0.06, Color("#8ed5aa"))
 
 
-class PixelStar:
-	extends Control
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pivot_offset = size / 2.0
-		queue_redraw()
-
-	func _draw() -> void:
-		var center := size / 2.0
-		var outer := _star_points(center, minf(size.x, size.y) * 0.48)
-		var inner := _star_points(center, minf(size.x, size.y) * 0.35)
-		draw_colored_polygon(outer, Color("#2f2140"))
-		draw_colored_polygon(inner, Color("#ffc857"))
-		draw_circle(center + Vector2(-8, -9), 4.0, Color("#fff1c9"))
-
-	func _star_points(center: Vector2, radius: float) -> PackedVector2Array:
-		var points := PackedVector2Array()
-		for index in 10:
-			var point_radius := radius if index % 2 == 0 else radius * 0.45
-			var angle := -PI / 2.0 + float(index) * PI / 5.0
-			points.append(center + Vector2(cos(angle), sin(angle)) * point_radius)
-		return points
-
-
-class PixelScore:
-	extends Control
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pivot_offset = size / 2.0
-		queue_redraw()
-
-	func _draw() -> void:
-		_draw_five(Vector2(20, 5))
-		for block_index in 4:
-			draw_rect(Rect2(101 - block_index * 9, 12 + block_index * 13, 10, 14), Color("#2f2140"))
-		_draw_five(Vector2(144, 5))
-
-	func _draw_five(origin: Vector2) -> void:
-		var thickness := 10.0
-		var digit_width := 50.0
-		var digit_height := 64.0
-		draw_rect(Rect2(origin, Vector2(digit_width, thickness)), Color("#2f2140"))
-		draw_rect(Rect2(origin, Vector2(thickness, digit_height * 0.52)), Color("#2f2140"))
-		draw_rect(Rect2(origin + Vector2(0, 27), Vector2(digit_width, thickness)), Color("#2f2140"))
-		draw_rect(Rect2(origin + Vector2(digit_width - thickness, 27), Vector2(thickness, digit_height - 27)), Color("#2f2140"))
-		draw_rect(Rect2(origin + Vector2(0, digit_height - thickness), Vector2(digit_width, thickness)), Color("#2f2140"))
-		draw_rect(Rect2(origin + Vector2(10, 10), Vector2(18, 5)), Color("#f45b9d"))
-
-
 class ConfettiPiece:
 	extends Control
 
@@ -250,59 +219,3 @@ class ConfettiPiece:
 	func _draw() -> void:
 		draw_rect(Rect2(Vector2.ZERO, size), Color("#2f2140"))
 		draw_rect(Rect2(3, 3, maxf(1.0, size.x - 6), maxf(1.0, size.y - 6)), piece_color)
-
-
-class AccessoryArt:
-	extends Control
-
-	var item_kind := ""
-
-	func _init(kind: String = "") -> void:
-		item_kind = kind
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		pivot_offset = size / 2.0
-		queue_redraw()
-
-	func _draw() -> void:
-		match item_kind:
-			"hat":
-				_rect(8, 63, 84, 18, Color("#2f2140"))
-				_rect(14, 67, 72, 10, Color("#f45b9d"))
-				_rect(24, 14, 52, 56, Color("#2f2140"))
-				_rect(30, 20, 40, 42, Color("#fff1c9"))
-				_rect(30, 50, 40, 12, Color("#f45b9d"))
-			"sword":
-				_poly([Vector2(43, 4), Vector2(59, 4), Vector2(59, 62), Vector2(51, 78), Vector2(43, 62)], Color("#2f2140"))
-				_poly([Vector2(47, 10), Vector2(55, 10), Vector2(55, 60), Vector2(51, 69), Vector2(47, 60)], Color("#e9f6ff"))
-				_rect(27, 64, 48, 12, Color("#2f2140"))
-				_rect(33, 67, 36, 6, Color("#ffc857"))
-				_rect(44, 74, 14, 22, Color("#2f2140"))
-				_rect(48, 76, 6, 17, Color("#b86f43"))
-			"shield":
-				_poly([Vector2(12, 12), Vector2(88, 12), Vector2(84, 65), Vector2(50, 94), Vector2(16, 65)], Color("#2f2140"))
-				_poly([Vector2(20, 20), Vector2(80, 20), Vector2(76, 61), Vector2(50, 84), Vector2(24, 61)], Color("#ffc857"))
-				_rect(44, 29, 12, 44, Color("#fff1c9"))
-				_rect(30, 43, 40, 12, Color("#fff1c9"))
-			"bowtie":
-				_poly([Vector2(7, 24), Vector2(43, 42), Vector2(43, 62), Vector2(7, 80)], Color("#2f2140"))
-				_poly([Vector2(93, 24), Vector2(57, 42), Vector2(57, 62), Vector2(93, 80)], Color("#2f2140"))
-				_poly([Vector2(14, 34), Vector2(41, 47), Vector2(41, 57), Vector2(14, 70)], Color("#f45b9d"))
-				_poly([Vector2(86, 34), Vector2(59, 47), Vector2(59, 57), Vector2(86, 70)], Color("#f45b9d"))
-				_rect(40, 39, 20, 28, Color("#2f2140"))
-				_rect(45, 44, 10, 18, Color("#fff1c9"))
-			"tie":
-				_poly([Vector2(36, 8), Vector2(64, 8), Vector2(69, 28), Vector2(50, 41), Vector2(31, 28)], Color("#2f2140"))
-				_poly([Vector2(40, 13), Vector2(60, 13), Vector2(63, 25), Vector2(50, 34), Vector2(37, 25)], Color("#f45b9d"))
-				_poly([Vector2(42, 35), Vector2(58, 35), Vector2(70, 82), Vector2(50, 96), Vector2(30, 82)], Color("#2f2140"))
-				_poly([Vector2(46, 42), Vector2(54, 42), Vector2(63, 78), Vector2(50, 87), Vector2(37, 78)], Color("#f45b9d"))
-
-	func _rect(x: float, y: float, width: float, height: float, color: Color) -> void:
-		draw_rect(Rect2(x * size.x / 100.0, y * size.y / 100.0, width * size.x / 100.0, height * size.y / 100.0), color)
-
-	func _poly(source_points: Array[Vector2], color: Color) -> void:
-		var points := PackedVector2Array()
-		for point in source_points:
-			points.append(Vector2(point.x * size.x / 100.0, point.y * size.y / 100.0))
-		draw_colored_polygon(points, color)

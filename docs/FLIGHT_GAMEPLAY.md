@@ -17,6 +17,13 @@ Training is a tap-to-flap obstacle game:
 - tap or click anywhere in the flight area to gain height;
 - gravity continually pulls the dragon down;
 - rock-spike pairs move from right to left;
+- the opening begins at 300 logical pixels high, shrinks by 15 pixels after
+  every five cleared obstacles, and never becomes smaller than 130 pixels;
+- neighboring opening centers begin with a 200-pixel movement delta; this
+  grows by 15 pixels per cleared obstacle and is capped at 500 pixels;
+- after ten obstacles, neighboring opening centers must differ by at least
+  75 pixels; that required minimum grows by 15 pixels every five obstacles
+  and is capped at 150 pixels from obstacle 35 onward;
 - clearing one spike pair immediately awards and saves one flight XP;
 - touching a spike or leaving the flight area ends the round;
 - there is no round-length limit, so one strong run can gain multiple levels.
@@ -26,7 +33,8 @@ counter continues past ten obstacles. Clearing 50 obstacles in one run therefore
 Flight Level 5; players can continue farming higher levels until they collide.
 
 `scripts/ui/flight_game.gd` owns moment-to-moment physics and emits only the round result.
-`GameState` owns the persistent XP and derives the dragon's level from it.
+`GameState` stores persistent XP in the dragon's category map and derives its level from
+the Flight Training definition.
 
 ## Flight Contest
 
@@ -50,8 +58,9 @@ train → reach Level 5 → glide 50 m → win 1 gold → buy 1 egg
 
 - `assets/art/flight/flight_dragon.png` is the transparent, cropped game sprite prepared
   from the supplied flight-dragon image.
-- `assets/art/flight/rock_spikes_game.png` is the transparent pixel-art obstacle. Training
-  uses the same asset upright for ceiling rocks and vertically flipped for ground rocks.
+- `scripts/ui/flight_pillar.gd` draws the complete pixel-rock obstacle, including its
+  tapered peak, irregular shaft stones, facet lighting, cracks, chips, and crystal
+  clusters. Three palette and pattern variants are used for ceiling and ground pillars.
 - `tools/prepare_flight_assets.gd` reproducibly crops and scales the checked-in source
   images with nearest-neighbour filtering.
 

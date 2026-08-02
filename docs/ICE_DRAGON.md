@@ -1,30 +1,31 @@
 # Frost: Egg, Dragon, and Island
 
-## Player flow
+## Current status
 
-1. Win one gold coin by reaching Flight Level 5 and completing a 50-metre
-   Flight Contest glide.
-2. Buy the **Frost Crystal Egg** in the shop for one gold.
-3. Start incubation and accumulate 1,000 steps.
-4. Hatch Frost, whose saved species is `ice`.
-5. Select Frost in the dragon den to visit the snow-and-crystal island.
+Frost, the Frost Crystal Egg, and the snow-and-crystal island remain preserved
+for compatible save loading and debug previews. The ice egg is currently not
+offered in the shop or awarded by the normal game flow.
+
+Existing saves that already contain a Frost egg can still complete the
+1,000-step incubation and hatch Frost. Existing Frost dragons remain usable in
+the den and retain their care and training progress.
 
 Frost uses the same care, grooming, flight-training, and contest systems as the
 starter dragon. Flight XP is stored on each dragon, so progress follows the
 selected dragon.
 
-## Species data
+## Dragon data
 
-Eggs store a stable `kind`, and dragons store a stable `species`. The current
-mapping is:
+Eggs and owned dragons store a stable dragon-definition ID. Definitions own names,
+types, egg kinds, and art:
 
-| Egg kind | Hatched dragon | Dragon species | Habitat |
-| --- | --- | --- | --- |
-| `ice` | Frost | `ice` | Ice island |
-| `sunwing` | Nova | `sunwing` | Green island |
+| Definition | Egg kind | Hatched dragon | Types | Habitat |
+| --- | --- | --- | --- | --- |
+| `frost` | `ice` | Frost | `ice` | Ice island |
+| `nova` | `sunwing` | Nova | `sunwing` | Green island |
 
-Older saves without these fields default to `sunwing`. Display names remain
-localization keys rather than save-file text.
+Older `kind` and `species` values migrate to definition IDs when loaded. Display names
+remain localization keys rather than save-file text.
 
 ## Art assets
 
@@ -54,6 +55,6 @@ crisp.
 
 ## Validation
 
-`tests/smoke_test.gd` verifies the purchase, `ice` egg kind, 1,000-step
-incubation, Frost hatch, species-specific habitat texture, grooming, per-dragon
-Flight Level 5 progression, contest completion, and gold reward.
+`tests/domain_test.gd` verifies that the Frost definition remains available for
+legacy data. `tests/smoke_test.gd` verifies that the active shop rejects ice-egg
+purchases without spending gold.

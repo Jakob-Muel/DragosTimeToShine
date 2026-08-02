@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="FusionRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/fusion_recipe.gd" id="1_recipe"]
+
+[resource]
+script = ExtResource("1_recipe")
+parent_a = &"ember"
+parent_b = &"terra"
+result = &"lavara"
+fusion_star_cost = 1

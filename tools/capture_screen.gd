@@ -51,6 +51,10 @@ func _capture() -> void:
 		await create_timer(3.5).timeout
 	elif display_screen == "groomed":
 		await create_timer(0.12).timeout
+	elif display_screen == "fusion_trace":
+		await create_timer(0.12).timeout
+	elif display_screen in ["flight_contest", "result"]:
+		await create_timer(1.15).timeout
 	var image := capture_viewport.get_texture().get_image()
 	var error := image.save_png(output)
 	if error != OK:

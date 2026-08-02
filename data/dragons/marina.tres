@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="DragonDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/dragon_definition.gd" id="1_definition"]
+
+[resource]
+script = ExtResource("1_definition")
+id = &"marina"
+name_key = &"WATER_DRAGON_NAME"
+types = Array[StringName]([&"water"])
+egg_kind = &"water"
+egg_name_key = &"WATER_EGG_NAME"
+hatch_message_key = &"WATER_HATCHED_MESSAGE"
+level_species_key = &"WATER_LEVEL_SPECIES"
+egg_texture_path = "res://assets/art/water/water_egg.png"
+dragon_texture_path = "res://assets/art/water/water_dragon_hd.png"
+island_texture_path = "res://assets/art/water/water_island_hd.png"
+flight_texture_path = "res://assets/art/flight/dragons/marina_flight.png"
