@@ -11,12 +11,39 @@ The constraints below are what force real output.
 
 ## 0. Ground Rules
 
-### Target resolution
+### Responsive canvas and pixel-art grid
 
-Virtual canvas: **240 × 428** portrait (240 wide is a deliberate GBA nod; 428 tall covers 9:16 phones).
-One virtual pixel = 1/240 of screen width. Godot: `stretch/mode = "viewport"`, `scale_mode = "integer"`.
+The GBA influence is a **visual language**, not a fixed GBA-sized screen. Do not force the
+game into a 240 × 428 viewport or require integer-only whole-screen scaling. Those rules
+letterbox or crop modern 19.5:9 and 20:9 phones, waste space on tablets, and make localized
+UI unnecessarily cramped.
 
-Every asset below is sized in **virtual pixels**. Generate small, scale up with nearest-neighbour.
+The project uses its existing responsive canvas:
+
+- **720 logical units wide**; the logical height expands to match the device aspect ratio
+- Godot: `stretch/mode = "canvas_items"`, `stretch/aspect = "expand"`
+- width-based fitting through `GameCanvas`, with safe-area insets for camera cutouts,
+  the Dynamic Island, and home indicators
+- backgrounds may bleed through the entire viewport; controls and important artwork must
+  remain inside the safe area
+
+Use a separate **1× pixel-art authoring grid** for assets. A nominal 240-pixel art width maps
+to the 720-unit design width at **3 logical units per art pixel**. All dimensions in the
+prompts below are source art pixels unless a prompt explicitly says otherwise. For example,
+a 32 × 32 source button is normally displayed at 96 × 96 logical units.
+
+Keep each asset's on-screen scale an integer multiple of its source size whenever practical.
+The final canvas-to-device scale may be fractional; that is expected on modern high-density
+screens. Use nearest-neighbour texture filtering, disable mipmaps for UI art, and snap static
+UI placement to whole logical units. Never stretch sprites non-uniformly.
+
+Layout must be responsive rather than scaled as one fixed composition:
+
+- anchor headers and resource counters below the safe top inset
+- anchor bottom actions above the safe bottom inset
+- allow flexible vertical spacing in the middle of the screen
+- use containers and 9-slices for localized text and accessibility-sized controls
+- test at minimum on 16:9, 19.5:9, 20:9, and a tablet aspect ratio
 
 ### Palette (24 colors — do not exceed)
 
@@ -27,6 +54,7 @@ Every asset below is sized in **virtual pixels**. Generate small, scale up with 
 | Pink light / base / dark | `#f08bb0` `#e75d91` `#9e3f68` |
 | Cream light / base / deep / shade | `#fffaf0` `#fff1d2` `#f3d9ae` `#d9b98a` |
 | Sky light / base / dark | `#a8e6f5` `#78d6ed` `#4fb3d0` |
+| Sky haze | `#dff3ef` |
 | Green light / base / dark | `#a9d69a` `#4f956c` `#35684d` |
 | Gold light / base / dark | `#f5c877` `#e9aa46` `#ad6f31` |
 | Lilac / lilac dark | `#9a78b3` `#6d5085` |
@@ -58,10 +86,13 @@ gridlines, checkerboard, watermark, text, letters, numbers.
 
 The model will still cheat. Always run this on the result:
 
-1. Downscale to the exact target size with **nearest-neighbour** (never bicubic/Lanczos)
+1. Downscale to the exact source-asset size with **nearest-neighbour** (never bicubic/Lanczos)
 2. Quantize to the palette above (Aseprite: `Sprite > Color Mode > Indexed` with the palette loaded)
 3. Delete stray semi-transparent pixels on the alpha edge
 4. For tiles and 9-slices: manually verify the seams tile/stretch cleanly
+5. Import UI textures with nearest-neighbour filtering and mipmaps disabled
+6. Preview at the intended in-game size on both a high-density phone and a tablet; judge
+   readability at actual size, not only while zoomed into the source asset
 
 Prompts 1–6 are the ones that fix the "modern app" feel. Do those first.
 
@@ -367,8 +398,12 @@ already in the repo but unused — `scripts/ui/ui_tokens.gd` only preloads Nunit
 Before switching, verify:
 
 - German umlauts `ä ö ü Ä Ö Ü ß` render correctly
-- The font is used at exact integer multiples of its design size, or it will blur
-- Enable `Nearest` filtering on the font import, and disable font anti-aliasing / MSDF
+- Use integer logical font sizes and place labels on whole logical units; do not require the
+  entire device canvas to use an integer scale
+- Disable MSDF and mipmaps; compare monochrome/no anti-aliasing with grayscale anti-aliasing
+  on real high-density phones and keep the most readable option
+- Verify long German labels at the narrowest supported safe width without shrinking them
+  below the minimum readable size
 
 ---
 
@@ -376,11 +411,11 @@ Before switching, verify:
 
 | # | Assets | Impact |
 |---|---|---|
-| 1 | Font swap (no art needed) | Very high — free |
-| 2 | Prompt 2 (buttons) | Very high |
-| 3 | Prompt 4 (clouds) | High |
-| 4 | Prompt 3 (panels) | High |
-| 5 | Prompt 5 (flight ground/parallax) | High — fixes the worst screen |
-| 6 | Prompts 6, 7 (icons, bars) | Medium |
-| 7 | Prompt 8 (flight dragons) | Medium |
-| 8 | Virtual-resolution migration | Highest, but invasive — do last |
+| 1 | Responsive-layout and safe-area audit | Very high — foundation already exists |
+| 2 | Font swap (no art needed) | Very high — free |
+| 3 | Prompt 2 (buttons) | Very high |
+| 4 | Prompt 4 (clouds) | High |
+| 5 | Prompt 3 (panels) | High |
+| 6 | Prompt 5 (flight ground/parallax) | High — fixes the worst screen |
+| 7 | Prompts 6, 7 (icons, bars) | Medium |
+| 8 | Prompt 8 (flight dragons) | Medium |
