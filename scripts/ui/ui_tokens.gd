@@ -24,3 +24,6 @@ const LILAC := Color("#9a78b3")
 const FONT_REGULAR := preload("res://assets/fonts/Nunito-Regular.tres")
 const FONT_BOLD := preload("res://assets/fonts/Nunito-Bold.tres")
 const FONT_HEAVY := preload("res://assets/fonts/Nunito-Heavy.tres")
+
+## Keep seed counters unambiguous at small sizes.
+const FONT_NUMERIC := preload("res://assets/fonts/Nunito-Bold.tres")

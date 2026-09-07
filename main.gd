@@ -13,6 +13,7 @@ const FLIGHT_DRAGON_SELECT_SCREEN := preload("res://scenes/screens/flight_dragon
 const FLIGHT_HUB_SCREEN := preload("res://scenes/screens/flight_hub_screen.tscn")
 const FLIGHT_TRAINING_SCREEN := preload("res://scenes/screens/flight_training_screen.tscn")
 const FLIGHT_CONTEST_SCREEN := preload("res://scenes/screens/flight_contest_screen.tscn")
+const DRAGON_LAB_SCREEN := preload("res://scenes/screens/dragon_lab_screen.tscn")
 const HABITAT_SCREEN := preload("res://scenes/screens/habitat_screen.tscn")
 const GROOM_SCREEN := preload("res://scenes/screens/groom_screen.tscn")
 
@@ -145,6 +146,8 @@ func _on_screen_navigation(route: String, params: Dictionary) -> void:
 			_show_flight_hub()
 		"flight_training":
 			_show_flight_training()
+		"dragon_lab":
+			_show_dragon_lab()
 		"flight_contest":
 			_show_flight_contest()
 		_:
@@ -257,6 +260,10 @@ func _show_flight_training() -> void:
 		{"selected_dragon_id": selected_dragon_id}
 	)
 
+func _show_dragon_lab() -> void:
+	_show_routed_screen("dragon_lab", DRAGON_LAB_SCREEN)
+
+
 func _on_flight_score_changed(_score: int) -> void:
 	# Compatibility entry point for deterministic smoke tests.
 	GameState.add_flight_xp(selected_dragon_id, 1)
@@ -305,6 +312,8 @@ func _rebuild_current_screen() -> void:
 			_show_flight_select()
 		"flight_training":
 			_show_flight_training()
+		"dragon_lab":
+			_show_dragon_lab()
 		"flight_contest":
 			_show_flight_contest()
 		_:
@@ -513,6 +522,8 @@ func debug_show_screen(screen_name: String) -> void:
 				if child.get_script() == FLIGHT_GAME:
 					child.call("debug_show_obstacle")
 					break
+		"dragon_lab":
+			_show_dragon_lab()
 		"flight_contest":
 			GameState.add_flight_xp(
 				selected_dragon_id,

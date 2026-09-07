@@ -172,3 +172,13 @@ func _build_actions(y: float) -> void:
 	contest_button.pressed.connect(navigate.bind("flight_select", {}))
 	add_child(contest_button)
 	WidgetFactory.add_button_caption(contest_button, tr_text("CONTEST_CAPTION"))
+
+	var dragon_lab_button := WidgetFactory.button(
+		tr_text("NAV_DRAGON_LAB"),
+		Rect2(370, y + 256.0, 298, 82),
+		UiTokens.LILAC,
+		Color("#6d5085")
+	)
+	dragon_lab_button.add_theme_font_size_override("font_size", 22)
+	dragon_lab_button.pressed.connect(navigate.bind("dragon_lab", {}))
+	add_child(dragon_lab_button)
