@@ -13,7 +13,7 @@ implementation. Prepare options, do not decide alone.
 
 ## Next up (short list)
 
-1. M0.1 Commit the working-tree backlog in reviewed chunks (user's call, see M0).
+1. M0.1 Review and merge `progressTowards05` into `main` (the backlog is now committed).
 2. M0.2 Run every headless suite in CI and confirm failing asserts fail the job.
 3. M0.3 Hide the Dragon Lab from release builds.
 4. M1.1 Atomic save with backup.
@@ -25,7 +25,7 @@ Goal: a clean, trustworthy base before new features.
 
 | Task | Files | Acceptance |
 | --- | --- | --- |
-| M0.1 Split the uncommitted backlog into logical commits (art, tests, tools, gameplay, docs) | whole repo | `git status` clean; each commit builds; the user approves the split |
+| M0.1 Merge `progressTowards05` into `main` (backlog already committed in logical chunks) | whole repo | CI green on `main`; PWA deploys |
 | M0.2 Add all 12 headless suites to CI; verify a deliberately failing `assert` turns the job red (if not, add an explicit `quit(1)` failure path in tests) | `.github/workflows/deploy-pages.yml`, `tests/` | CI runs 12 suites; a broken test fails CI |
 | M0.3 Show Dragon Lab only when `OS.is_debug_build()` | `main_menu_screen.gd` | Release export has no Dragon Lab button; routing test still passes |
 | M0.4 Remove dead code: `next_unowned_egg`, unused contest wrappers, and decide on `gems` (remove or give it a purpose) | `collection_service.gd`, `game_state.gd`, `main_menu_screen.gd` | No unused public API; save migration drops or keeps `gems` explicitly |

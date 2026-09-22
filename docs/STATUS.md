@@ -64,9 +64,8 @@ Legend: **Done** works end to end · **Partial** exists with known gaps · **Mis
 7. **Fusion species fallback.** Pairs without a recipe produce parent A's species; the
    child's look is a fresh random seed, so inheritance is not visible.
 8. **Routing is a hand-written match block** in `main.gd`; every new screen touches it.
-9. **Uncommitted work.** At the time of writing about 55 tracked files are modified and many
-   are untracked on the working tree (new art, tests, tools, docs). Commit or discard them
-   deliberately before large refactors.
+9. **Unmerged branch.** All work up to 2026-09-22 is committed on `progressTowards05`
+   (forked from `graphic-redesign`); `main` is still at the older pixel-art state.
 10. **Repository size.** `docs/screenshots/` is about 45 MB, `assets/` about 136 MB,
     including legacy sprite sets that runtime no longer uses.
 11. **Legacy sprites.** Dragon definitions still reference fixed species sprites and
