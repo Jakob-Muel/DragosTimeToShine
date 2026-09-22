@@ -1,18 +1,13 @@
 # Frosteros: Egg, Dragon, and Island
 
 ## Current status
+> **Legacy doc.** Frosteros (`frost`) is now a normal member of the shop's random egg
+> pool and is drawn with the shared procedural renderer and universal island like every
+> other dragon. The dedicated Frost Crystal Egg and winter island below are legacy assets.
 
-Frosteros, the Frost Crystal Egg, and the snow-and-crystal island remain preserved
-for compatible save loading and debug previews. The ice egg is currently not
-offered in the shop or awarded by the normal game flow.
-
-Existing saves that already contain a Frost egg can still complete the
-1,000-step incubation and hatch Frosteros. Existing Frosteros dragons remain usable in
-the den and retain their care and training progress.
-
-Frosteros uses the same care, grooming, flight-training, and contest systems as the
-starter dragon. Flight XP is stored on each dragon, so progress follows the
-selected dragon.
+The separate ice egg kind is not sold. Old saves that contain a Frost egg migrate it to the
+generic 5,000-step egg (schema 9 migrated old 1,000-step eggs). Existing Frosteros dragons
+keep their care and training progress.
 
 ## Dragon data
 

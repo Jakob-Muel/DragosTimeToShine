@@ -1,6 +1,6 @@
 # Drago's Time to Shine
 
-A mobile-first Godot 4.6 proof of concept for a cozy dragon care game.
+A mobile-first Godot 4.6 prototype of a cozy dragon care, breeding and training game.
 
 ## Current prototype loop
 
@@ -8,13 +8,15 @@ A mobile-first Godot 4.6 proof of concept for a cozy dragon care game.
 2. Visit your dragon in its habitat. Later, choose **Den → Dragons** or **Eggs** to manage your collection.
 3. Select a dragon and press **Feed** to drop a berry. The dragon walks over
    with a paper-sprite bob, eats it, and gains care/hunger progress.
-4. Press **Groom** for a close-up care view. Drag the pixel comb inside the
-   framed grooming area. Clean and stretching react over the dragon's visible pixels.
-5. Choose **Contest** to enter Flight School. In **Flight Training**, tap to
-   flap between rock spikes. Each cleared obstacle awards one XP, every ten XP
-   adds one Flight Level, and training continues until Luma hits an obstacle.
-6. Reach Flight Level 5 to unlock the **Flight Contest**. The selected dragon
-   then glides 50 metres and wins one gold coin.
+4. Press **Groom** for a close-up care view. Drag the comb inside the
+   framed grooming area. Clean and stretching react over the dragon's visible body.
+5. Choose **Contest**, pick a dragon, and open its Flight hub. In **Flight Training**, tap
+   to flap between rock spikes. Each cleared obstacle awards one XP, every ten XP adds one
+   Flight Level, and training continues until the dragon hits an obstacle.
+6. Reach Flight Level 5 to unlock the first **Flight Contest** (50 m). Later goals are
+   70 m (Level 7) and 100 m (Level 10). Each win awards one gold coin.
+   **Element Power** training (main menu) is a top-down shooter in which the dragon fires
+   automatically.
 7. Open **Shop** from the main menu and spend one gold coin on a **Dragon Egg**.
    It contains a random base dragon with individual attribute potentials. Start incubation and walk 5,000 steps
    to reveal it. Desktop/web builds provide a test-step button.
@@ -59,6 +61,10 @@ when you also want the full device-and-Simulator validation pass.
 
 ## Project documentation
 
+AI agents: start with [AGENTS.md](AGENTS.md). Current state and plan:
+[Status](docs/STATUS.md), [Roadmap](docs/ROADMAP.md),
+[Product decisions](docs/PRODUCT_DECISIONS.md).
+
 - [DraGO: Produktanforderungen und Implementierungsplan (Originalbericht)](docs/requirements/DRAGO_PRODUKTANFORDERUNGEN_UND_IMPLEMENTIERUNGSPLAN.html)
 
 - [Soll-Ist-Abgleich zum Produktbericht](docs/requirements/SOLL_IST_ABGLEICH.md)
@@ -66,7 +72,9 @@ when you also want the full device-and-Simulator validation pass.
 - [Architecture and module boundaries](docs/ARCHITECTURE.md)
 - [Modular breeding and talent architecture](docs/BREEDING_AND_TALENTS_ARCHITECTURE.md)
 - [Flight training, contest, and reward rules](docs/FLIGHT_GAMEPLAY.md)
-- [Frosteros, ice dragon, and winter island](docs/ICE_DRAGON.md)
+- [Procedural dragons and universal island](docs/UNIFIED_DRAGONS.md)
+- [Comic art direction](docs/COMIC_ART.md)
+- [Frosteros (legacy)](docs/ICE_DRAGON.md)
 - [Native iOS/Android build pipeline](docs/MOBILE_PIPELINE.md)
 - [Step-counter plugin contract](native/README.md)
 
@@ -89,6 +97,8 @@ Run the deterministic project tests without opening a window:
 /Applications/Godot.app/Contents/MacOS/Godot \
   --headless --log-file /tmp/dragos-test.log --path . --script tests/font_coverage_test.gd
 ```
+
+The full list of suites (and which need a graphics device) is in `AGENTS.md`.
 
 ## Installable Web App
 

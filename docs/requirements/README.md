@@ -5,3 +5,9 @@
 - [Aktueller Gameplay-Loop](../GAMEPLAY_LOOP.md): bereits implementierter Ablauf und aktuelle Entscheidungen.
 
 Der Originalbericht beschreibt das Produktziel, nicht den erreichten Implementierungsstand. Seine technischen Vorschläge sind keine automatische Beauftragung für einen Framework-Wechsel. Neuere ausdrückliche Nutzerentscheidungen haben Vorrang: ein sofort schlüpfendes Starterei, eine kaufbare Eiersorte mit Zufallsdrache, 5.000 Schritte für gekaufte Eier, ein Shop-Zugang im Hauptmenü.
+
+**Aktualisierung 22.09.2026:** Verbindliche Produktentscheidungen stehen in
+[`../PRODUCT_DECISIONS.md`](../PRODUCT_DECISIONS.md) (Englisch). Insbesondere: kein
+rundenbasiertes Kampfsystem und keine Ladder (Kampfmechaniken nur innerhalb von
+Minispielen, langfristig ein Survivor-Modus), Comic-Stil statt Pixel-Art, Godot bleibt.
+Aktueller Stand: [`../STATUS.md`](../STATUS.md), Plan: [`../ROADMAP.md`](../ROADMAP.md).

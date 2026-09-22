@@ -1,5 +1,7 @@
 # Comic art direction
 
+> Canonical art style (`PRODUCT_DECISIONS.md` D-04). New art must follow this doc.
+
 The runtime art now uses rounded ink contours, warm paper surfaces, soft gradient lighting and the bundled Nunito family. Standing collection dragons are rendered with the same curved anatomy and lighting as Dragon Lab. The Lab's seed contract is unchanged.
 
 The comic raster library lives in `assets/art/comic/`: eggs, care/navigation icons, clouds, panels/buttons, and the shooter sprites and scenery. Runtime dragons now use the shared procedural renderer in portrait, flight and overhead views; all habitats use `universal_island.png`. Earlier fixed dragon sprites and elemental islands remain as legacy source material. See [Unified dragons and island](UNIFIED_DRAGONS.md) for the current pipeline and island generation prompt.

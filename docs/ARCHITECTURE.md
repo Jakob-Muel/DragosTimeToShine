@@ -36,11 +36,13 @@ flowchart TD
 | `scripts/ui/widget_factory.gd` + `ui_tokens.gd` | Shared pixel UI construction and visual tokens | Navigation or persistence |
 | `scripts/game_state.gd` | Persistent instances, currencies, save migration, UI-facing gameplay API | UI nodes |
 | `data/` + `scripts/data/` | Typed dragon, training-category, and fusion-recipe definitions | Player progress |
-| `scripts/domain/` | Collection uniqueness, care eligibility, and deterministic fusion rules | UI nodes or save I/O |
+| `scripts/domain/` | Care rules, training evaluation, attributes, fusion rules, content catalog | UI nodes or save I/O |
 | `scripts/step_counter.gd` | One stable step API plus desktop/web test fallback | HealthKit/Health Connect implementation details |
 | `scripts/localization.gd` | Load locale catalog, translate keys, switch language | Hard-coded screen layout |
 | `scripts/ui/pixel_art.gd` | Reusable code-drawn visual controls | Gameplay rules |
-| `scripts/ui/flight_game.gd` | Endless flight-training physics, spike pairs, collision, score | Persistent XP or rewards |
+| `scripts/ui/talent_minigame.gd` | Base contract for every training minigame (one result or cancel per run) | Persistent XP or rewards |
+| `scripts/ui/flight_game.gd`, `flame_shooter_game.gd` | Flight and Element Power minigames | Persistent XP or rewards |
+| `scripts/ui/seeded_dragon.gd`, `dragon_views.gd`, `procedural_dragon_textures.gd` | Procedural dragon traits and rendering (portrait, flight, top-down) | Gameplay rules |
 | `scripts/build_info.gd` | Display-only build version injected by CI | Game state |
 | `native/` | Reference HealthKit and Health Connect providers | Godot screen logic |
 
@@ -49,64 +51,84 @@ Screens receive only canvas context and route parameters; they emit navigation r
 back through `ScreenRouter`. Gameplay mutations go through `GameState`.
 
 ## Screen flow
-
 ```mermaid
 flowchart LR
     Main --> Den
     Main --> Shop
     Main --> Settings
-    Main --> FlightSchool["Flight School"]
+    Main --> FlightSelect["Flight dragon select"]
+    Main -->|Element Power| Session["Training session"]
+    Main --> Lab["Dragon Lab (dev tool)"]
     Den --> Dragons
     Den --> Eggs
+    Den --> Fusion
     Dragons --> Habitat
     Habitat --> Groom
+    Habitat --> Attributes
+    Attributes -->|train an attribute| Session
     Eggs --> EggDetail["Egg detail"]
-    Shop -->|buy Fire Egg or Water Egg| EggDetail
-    EggDetail -->|1,000 steps + hatch| Dragons
-    Dragons -->|select Ember| FireIsland["Fire island"]
-    Dragons -->|select Marina| WaterIsland["Water island"]
-    FireIsland --> Groom
-    WaterIsland --> Groom
-    FlightSchool --> Training["Flight Training"]
-    FlightSchool -->|Level 5| FlightContest["Flight Contest"]
-    Training -->|XP| FlightSchool
-    FlightContest -->|50 m + 1 gold| Shop
-    Groom -->|clean reaches 100%| Habitat
+    Shop -->|purchase_egg route, 1 gold| EggDetail
+    Fusion -->|letter trace + Fusion Stars| Eggs
+    EggDetail -->|starter: instant hatch| Habitat
+    EggDetail -->|5,000 steps + hatch| Dragons
+    FlightSelect --> FlightHub["Flight hub"]
+    FlightHub --> Session
+    FlightHub -->|goal level reached| FlightContest["Flight contest"]
+    FlightContest -->|win: 1 gold| Shop
 ```
 
-Every current screen is a standalone scene. Interactive state such as grooming input,
-flight animations, egg-step callbacks, and accessory dragging remains local to its screen.
-`main.gd` keeps thin wrappers so existing debug tooling and tests can call familiar methods.
+Every screen is a standalone scene extending `GameScreen`. Interactive state such as
+grooming input, animations and egg-step callbacks stays local to its screen. `main.gd`
+dispatches routes in `_on_screen_navigation` and keeps thin wrappers used by tests and
+tools. `flight_training` and `flame_shooter` routes are legacy adapters around the generic
+`training_session` route.
 
 ## Saved data
+`GameState` stores schema-versioned JSON at `user://dragos_save.json`. The current
+`SAVE_SCHEMA_VERSION` is 11. Top level:
 
-`GameState` stores schema-versioned JSON at `user://dragos_save.json`:
+```json
+{
+  "schema_version": 11,
+  "currencies": {"gems": 125, "gold": 0, "fusion_stars": 3},
+  "dragons": [ ... ],
+  "eggs": [ ... ]
+}
+```
 
-- currencies: gems, gold, and Fusion Stars;
-- owned dragon instances with a definition ID, individual care, and category XP;
-- eggs with their reserved dragon-definition ID, incubation time, and step progress.
+Dragon instance keys (see `_new_dragon` and `_normalize_dragon`):
 
-The save is written only after mutations. Health samples are never stored—only the
-incubation timestamp and the aggregate step result.
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `id` | String | Stable instance ID (`luma` for the starter, else `dragon-<unix>-<rand>`) |
+| `definition_id` | String | Species in `GameCatalog` |
+| `starter` | bool | Hatched from the free starter egg |
+| `appearance_seed` | int | Seed for procedural looks |
+| `attributes` | Dict | `attack_power`, `attack_speed`, `movement_speed`, each `{value, potential}` |
+| `genetics_version` | int | Version of attribute rules |
+| `parent_ids`, `inheritance`, `generation` | Array, Dict, int | Fusion lineage and which parent supplied each potential |
+| `hunger`, `cleanliness`, `care_points` | int, float, int | Care state |
+| `training_xp`, `training_records` | Dict | Per talent ID; unknown IDs are preserved |
+| `applied_training_runs` | Array | Last 32 run IDs, duplicate-result guard |
+| `flight_contest_wins` | int | 0 to 3, index into goals 50/70/100 m |
 
-Schema 2 moves shared care onto each dragon, identifies content through typed definitions,
-and stores training XP by category. Schema-1 saves migrate automatically from legacy
-`species`, egg `kind`, global care, and `flight_xp` fields.
+Egg keys: `id`, `definition_id`, `starter`, `appearance_seed`, `attributes`,
+`genetics_version`, `parent_ids`, `inheritance`, `generation`, `required_steps`,
+`progress_steps`, `incubation_start`, `mock_baseline`. The hidden result is fixed when the
+egg is created.
 
-Load normalization collapses duplicate type signatures from older prototype saves,
-prefers the starter instance, and preserves the highest care and category-XP values.
-The Settings reset removes `dragos_save.json`, restores Luma and starting currencies,
-and returns the router to the main screen.
+Loading normalizes every dragon and egg, migrates older schemas (legacy `species`, egg
+`kind`, global care, `flight_xp`, 1,000-step eggs, direct Voltara) and resaves when the
+version was older. The save is written after every mutation through `_commit_change()`.
+Writes are not yet atomic (see `docs/ROADMAP.md` M1.1). Health samples are never stored,
+only the incubation timestamp and aggregate progress. The Settings reset deletes the file
+and restores a fresh starter egg.
 
-Flight progression values come from `data/training/flight.tres`: ten XP equals one level,
-Level 5 unlocks the contest, and each level contributes ten metres to the glide. A
-successful contest awards one gold coin; eggs cost one gold.
-
-Dragon definitions own stable identity, types, localized names, egg kinds, and art paths.
-Egg selection excludes both owned dragons and dragons already reserved by pending eggs.
-Fusion recipes are deterministic and order-independent; eligibility requires two distinct,
-happy, groomed parents, sufficient Fusion Stars, and an unowned result. No production
-fusion recipe is registered until its parent and hybrid content exist.
+Content rules: dragon definitions own identity, types, localized names and legacy art
+paths. Shop eggs draw from `RANDOM_DRAGON_POOL`. Fusion recipes are order-independent;
+eligibility requires two distinct dragons, enough Fusion Stars and den space (care is
+not required at the moment). Pairs without a recipe produce the first parent's species.
+Flight progression values come from `data/training/flight.tres`.
 
 ## Safe areas
 
@@ -133,31 +155,9 @@ the English object, translating values, and keeping every key. Interpolated labe
 `{name}`-style values through `Localization.text(key, values)`.
 
 ## Validation
-
-Run the deterministic test suites (including the shared talent contract):
-
-```sh
-/Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --path . --script tests/smoke_test.gd
-/Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --path . --script tests/domain_test.gd
-/Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --path . --script tests/training_contract_test.gd
-/Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --path . --script tests/training_session_test.gd
-/Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --path . --script tests/screen_routing_test.gd
-/Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --path . --script tests/font_coverage_test.gd
-```
-
-The smoke test covers the current player loop and schema-1 migration. The domain test
-covers unique egg rewards, pending reservations, deterministic fusion, care requirements,
-and Fusion Star costs. The routing test instantiates every standalone screen and exercises
-the shared router. The font coverage test keeps Pixelify Sans independent of platform fonts
-for German text, numerals, and punctuation. Native HealthKit queries and physical safe-area
-placement still require an iPhone because simulators do not provide representative personal
-step data.
+See `AGENTS.md` section 4 for the full list of test suites, which need a graphics device,
+and which run in CI. Native HealthKit queries and physical safe-area placement still
+require an iPhone.
 
 ## Change rules
 

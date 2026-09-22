@@ -1,11 +1,12 @@
 # Flight gameplay
 
 ## Player flow
+The main-menu **Contest** button opens the flight dragon selection, then the **Flight
+hub** for the chosen dragon:
 
-The main-menu **Contest** button opens **Flight School**, which has two choices:
-
-1. **Flight Training** is always available.
-2. **Flight Contest** unlocks when the selected dragon reaches Flight Level 5.
+1. **Flight Training** is always available. It runs through the generic
+   `training_session` route with `talent_id = "flight"`.
+2. **Flight Contest** unlocks when the dragon's contest distance reaches its next goal.
 
 Progress belongs to the selected dragon. Newly hatched dragons begin with zero flight XP
 and train independently.
@@ -37,35 +38,41 @@ Flight Level 5; players can continue farming higher levels until they collide.
 the Flight Training definition.
 
 ## Flight Contest
+Contest distance is `Flight Level × 10 metres` (`units_per_level` in
+`data/training/flight.tres`). Each dragon has three contest goals in order, tracked by
+`flight_contest_wins`:
 
-The contest is unlocked at Flight Level 5. Contest distance is:
+| Win # | Goal | Needed level | Opponent distances |
+| --- | --- | --- | --- |
+| 1 | 50 m | 5 | 38, 44, 48 |
+| 2 | 70 m | 7 | 56, 63, 68 |
+| 3 | 100 m | 10 | 82, 91, 98 |
+
+The contest is enterable only when the dragon's distance reaches the current goal, so an
+entered contest is always won. The dragon races three opponent dragons across a scrolling
+landscape and glides down while the distance counter advances. Each win awards one gold
+coin (`gold_reward`) and offers a route to the shop. After three wins there are no more
+flight goals for that dragon.
+
+Values live in `GameState` (`FLIGHT_CONTEST_GOALS`, `flight_contest_opponent_distances`).
 
 ```text
-Flight Level × 10 metres
-```
-
-The dragon glides across the contest screen and descends to the ground while the distance
-counter advances. Level 5 reaches 50 metres. A glide of at least 50 metres awards one gold
-coin and offers a direct route to the shop.
-
-Each new egg costs one gold coin. This closes the progression loop:
-
-```text
-train → reach Level 5 → glide 50 m → win 1 gold → buy 1 egg
+train → reach the goal level → race → win 1 gold → buy 1 egg
 ```
 
 ## Art assets
+- The player dragon is drawn procedurally from its `appearance_seed` in the flight pose
+  (`ProceduralDragonTextures.texture_for(seed, "flight")`), with linear filtering in the
+  comic style.
+- Contest opponents use `assets/art/comic/flight/opponents/`.
+- `scripts/ui/flight_pillar.gd` draws the rock obstacles in code.
+- `scripts/ui/flight_race_background.gd` and `assets/art/comic/source/ui_redesign/flight_environment/`
+  provide the scrolling contest landscape (see `docs/COMIC_ART.md` for the scrolling contract).
+- Older sprites in `assets/art/flight/` and `tools/prepare_flight_assets.gd` are legacy.
 
-- `assets/art/flight/flight_dragon.png` is the transparent, cropped game sprite prepared
-  from the supplied flight-dragon image.
-- `scripts/ui/flight_pillar.gd` draws the complete pixel-rock obstacle, including its
-  tapered peak, irregular shaft stones, facet lighting, cracks, chips, and crystal
-  clusters. Three palette and pattern variants are used for ceiling and ground pillars.
-- `tools/prepare_flight_assets.gd` reproducibly crops and scales the checked-in source
-  images with nearest-neighbour filtering.
+Collision boxes cover the dragon's body and the rock cores rather than every visible wing,
+tail or spike corner, making close passes more forgiving.
 
-The runtime uses nearest-neighbour texture filtering so the pixel edges remain crisp at
-phone resolutions. The dragon sprite is horizontally flipped in training and the glide
-contest so it faces the direction of travel. Collision boxes cover the dragon's body and the central
-rock cores rather than every visible wing, tail, or transparent spike corner, making close
-passes more forgiving.
+Attributes (`movement_speed`) are trained by flight runs but do not yet change flight
+physics (see `docs/ROADMAP.md` M2.2).
+

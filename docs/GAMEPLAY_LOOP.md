@@ -21,7 +21,7 @@ flowchart TD
 - New games start with **one egg, zero dragons, and zero gold**.
 - The starter egg is immediately ready; one tap reveals a random starter dragon and opens the habitat.
 - The free egg is granted once. Relaunching preserves egg or dragon progress.
-- Care improves training XP. Flight contests unlock at levels 5, 7, and 10;
+- Care improves training XP (up to +25 %). Flight contests unlock at levels 5, 7, and 10;
   each win awards 1 gold. Each dragon has its own contest progress.
 - The shop sells one generic Dragon Egg for 1 gold; incubation requires 5,000 steps.
   Its hidden random dragon and appearance are fixed when granted/purchased, so reloading cannot reroll them.
@@ -132,7 +132,10 @@ and attack speed use the element minigame; movement speed uses flight training.
 Earned training XP also adds points to the chosen attribute, capped at its potential.
 A repeated training result cannot award points twice. Existing category XP and records
 remain separate; capped combat attributes do not prevent practicing a minigame.
-The attributes do not yet change minigame damage, firing rate or movement physics.
+The attributes do not yet change minigame damage, firing rate or movement physics
+(planned in `ROADMAP.md` M2). They exist for action minigames such as the auto-firing
+Element Power shooter and a future survivor mode, which will also add HP. There are no
+dragon-vs-dragon battles (`PRODUCT_DECISIONS.md` D-03).
 
 Fusion stores each chosen parent ID, the exact inherited potentials and the generation
 on the egg. Hatching resets all three trained values to 10, as well as the new dragon’s

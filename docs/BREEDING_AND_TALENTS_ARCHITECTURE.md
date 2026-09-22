@@ -1,5 +1,10 @@
 # Modular breeding and talent architecture
 
+> Target design. Stages 1 and 2 are implemented; stages 3 to 6 are scheduled in
+> `ROADMAP.md` (M3). Where this doc and `PRODUCT_DECISIONS.md` differ, the decisions win.
+> Note: the implemented fusion currently allows repeated fusion of the same pair and
+> lets the player pick each attribute's potential (D-09); "one child per pair" is open (Q-06).
+
 ## Purpose
 
 This plan evolves the current prototype into a child-friendly care and breeding game
@@ -41,7 +46,9 @@ receive stars, records, and descriptive feedback
 
 The following are explicit non-goals for this slice:
 
-- combat, hit points, damage, an opponent ladder, or elemental weaknesses;
+- dragon-vs-dragon combat, an opponent ladder, or elemental weaknesses (combat
+  mechanics inside minigames are allowed; HP and a survivor mode are planned later, see
+  `PRODUCT_DECISIONS.md` D-03);
 - more than two talents;
 - recessive genes, mutations, rarity tiers, or multi-generation simulation;
 - repeated children from the same pair;

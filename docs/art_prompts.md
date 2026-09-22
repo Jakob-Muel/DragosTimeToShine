@@ -1,4 +1,10 @@
-# Art Prompts — Visual Style Cleanup
+# Art Prompts: Visual Style Cleanup (historical)
+
+> **Superseded (2026-09-22, decision D-04).** The game uses the comic style described in
+> `COMIC_ART.md` and `UNIFIED_DRAGONS.md`. Strict pixel art was dropped because it cannot
+> support procedurally generated dragons. Keep this file for history only; do not generate
+> new assets from these prompts. The palette hex values are still used in `ui_tokens.gd`.
+
 
 Image-generation prompts for replacing the code-drawn UI (buttons, panels, clouds, ground)
 with polished modern pixel-art assets. Dragons, islands, and eggs keep their existing art.

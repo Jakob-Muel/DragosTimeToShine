@@ -1,5 +1,9 @@
 # DraGO – Soll-Ist-Abgleich
 
+> Hinweis 22.09.2026: Die Zeilen „Kampf“, „Adaptive Offline-Ladder“ und „Belohnungen“
+> sind durch Entscheidung D-03 in `../PRODUCT_DECISIONS.md` nicht mehr Ziel. Die
+> aktuelle Reihenfolge steht in `../ROADMAP.md`.
+
 Stand: 22.09.2026. Grundlage: [Originalbericht](DRAGO_PRODUKTANFORDERUNGEN_UND_IMPLEMENTIERUNGSPLAN.html).
 Bewertet anhand des Quellcodes und der lokalen Tests, nicht anhand eines neuen iPhone-Gerätetests. Die Prozentbereiche im Bericht sind Planungsphasen, keine gemessene Fertigstellung.
 
