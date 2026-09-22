@@ -210,6 +210,18 @@ Re-run 2a and 2b substituting the palette triplet:
 
 Replaces the cream rounded cards (stat panel, dialogs, header bar).
 
+Current integrated assets:
+
+- Runtime 3× textures: `assets/art/ui_redesign/panels/*.png` (96 × 96)
+- Palette-locked 1× masters: `assets/art/ui_redesign/panels/source/*.png` (32 × 32)
+- Visual exploration sheet: `assets/art/ui_redesign/reference/panels_reference_source.png`
+- Reproducible generator: `tools/generate_ui_panel_assets.gd`
+
+`WidgetFactory.panel_style()` applies the shared cream, pink-accented, dark, sky, green,
+gold, and lilac families to card-sized surfaces. Raised and flat variants replace soft
+shadows with hard pixel offsets while preserving selected-card accents. Compact progress
+bars intentionally retain their existing style until Prompt 7 is integrated.
+
 ```
 [STYLE BLOCK]
 
@@ -368,9 +380,12 @@ Current integrated care sprites:
 
 - Runtime 3× sprites: `assets/art/ui_redesign/icons/sunberry.png` and
   `grooming_comb.png`
+- Shared settings cog: `assets/art/ui_redesign/icons/settings_gear.png`, drawn as a
+  palette-locked eight-tooth steel gear instead of approximated with a font glyph
 - Palette-locked masters: `assets/art/ui_redesign/icons/source/*.png`
 - Image-generation references: `assets/art/ui_redesign/icons/reference/*.png`
 - Reproducible post-process: `tools/generate_ui_care_assets.gd`
+- Reproducible navigation generation: `tools/generate_ui_navigation_assets.gd`
 
 The island status panel, care-action buttons, feeding animation, and draggable grooming tool
 all use these textures through `WidgetFactory.pixel_icon()`. The former code-drawn berry and
@@ -464,16 +479,29 @@ else identical.
 
 ## 9. Font
 
-No image generation needed. `assets/fonts/PixelifySans-Bold.ttf` and `-Regular.ttf` are
-already in the repo but unused — `scripts/ui/ui_tokens.gd` only preloads Nunito.
+Pixelify Sans Regular and Bold are now the shared interface faces in
+`scripts/ui/ui_tokens.gd`; Bold also supplies the display weight. The type was reviewed on
+the main menu, settings, shop, dragon collection, and fusion screens at the narrow iPhone SE
+profile. German umlauts, `ß`, numerals, punctuation, and long labels remain readable without
+overflow. `tests/font_coverage_test.gd` locks the required character set.
 
-Before switching, verify:
+Compact data uses a separate `FONT_NUMERIC` token backed by Nunito Bold. Pixelify's stylized
+`5` reads too much like `S` at counter size, so resource amounts, percentages, prices,
+levels, XP, distances, step totals, and other stat labels use the clearer numeric face while
+headings, buttons, names, and descriptive copy remain Pixelify.
+
+The font imports disable antialiasing, MSDF, and mipmaps. The monochrome render stayed
+readable in the narrow-phone review and aligns more cleanly with the sprite grid than the
+slightly softened grayscale render. Heart, sparkle, flag, and arrow glyphs still require
+system fallback; replace those four with palette-locked sprites during Prompt 6, then disable
+system fallback.
+
+Verified requirements:
 
 - German umlauts `ä ö ü Ä Ö Ü ß` render correctly
 - Use integer logical font sizes and place labels on whole logical units; do not require the
   entire device canvas to use an integer scale
-- Disable MSDF and mipmaps; compare monochrome/no anti-aliasing with grayscale anti-aliasing
-  on real high-density phones and keep the most readable option
+- Antialiasing, MSDF, and mipmaps are disabled after comparison with grayscale rendering
 - Verify long German labels at the narrowest supported safe width without shrinking them
   below the minimum readable size
 

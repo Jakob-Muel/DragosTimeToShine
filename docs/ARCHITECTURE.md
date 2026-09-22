@@ -134,7 +134,7 @@ the English object, translating values, and keeping every key. Interpolated labe
 
 ## Validation
 
-Run both deterministic test suites:
+Run the deterministic test suites (including the shared talent contract):
 
 ```sh
 /Applications/Godot.app/Contents/MacOS/Godot \
@@ -142,14 +142,22 @@ Run both deterministic test suites:
 /Applications/Godot.app/Contents/MacOS/Godot \
   --headless --path . --script tests/domain_test.gd
 /Applications/Godot.app/Contents/MacOS/Godot \
+  --headless --path . --script tests/training_contract_test.gd
+/Applications/Godot.app/Contents/MacOS/Godot \
+  --headless --path . --script tests/training_session_test.gd
+/Applications/Godot.app/Contents/MacOS/Godot \
   --headless --path . --script tests/screen_routing_test.gd
+/Applications/Godot.app/Contents/MacOS/Godot \
+  --headless --path . --script tests/font_coverage_test.gd
 ```
 
 The smoke test covers the current player loop and schema-1 migration. The domain test
 covers unique egg rewards, pending reservations, deterministic fusion, care requirements,
 and Fusion Star costs. The routing test instantiates every standalone screen and exercises
-the shared router. Native HealthKit queries and physical safe-area placement still require
-an iPhone because simulators do not provide representative personal step data.
+the shared router. The font coverage test keeps Pixelify Sans independent of platform fonts
+for German text, numerals, and punctuation. Native HealthKit queries and physical safe-area
+placement still require an iPhone because simulators do not provide representative personal
+step data.
 
 ## Change rules
 
@@ -159,3 +167,12 @@ an iPhone because simulators do not provide representative personal step data.
 4. Add a smoke assertion for every new critical loop.
 5. Avoid storing raw health data, and query only what the active feature needs.
 6. Add new screens under `scenes/screens/` and route through `ScreenRouter`.
+
+## Shared talent sessions
+
+`training_session` receives `talent_id`, `dragon_id`, and `return_route`. The shared
+screen instantiates the minigame scene from the training definition and handles live
+score, results, retry, and cancellation. It checks the run, dragon, and talent IDs
+before forwarding a completion to `GameState`. The legacy training screens delegate
+to this screen. A new talent needs a catalog definition and a `TalentMinigame` scene,
+without adding a new navigation branch or result screen.

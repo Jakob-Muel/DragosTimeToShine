@@ -4,8 +4,8 @@ A mobile-first Godot 4.6 proof of concept for a cozy dragon care game.
 
 ## Current prototype loop
 
-1. Choose **Den** from the main menu.
-2. Choose **Dragons** to visit Luma, or **Eggs** to inspect incubating eggs.
+1. Start a new game with **one free egg**. Press **Hatch now** to meet your first dragon immediately.
+2. Visit your dragon in its habitat. Later, choose **Den → Dragons** or **Eggs** to manage your collection.
 3. Select a dragon and press **Feed** to drop a berry. The dragon walks over
    with a paper-sprite bob, eats it, and gains care/hunger progress.
 4. Press **Groom** for a close-up care view. Drag the pixel comb inside the
@@ -15,20 +15,20 @@ A mobile-first Godot 4.6 proof of concept for a cozy dragon care game.
    adds one Flight Level, and training continues until Luma hits an obstacle.
 6. Reach Flight Level 5 to unlock the **Flight Contest**. The selected dragon
    then glides 50 metres and wins one gold coin.
-7. Open **Shop** and spend one gold coin on either an **Ember Egg** or a
-   **Tidal Egg**. Start incubation and walk 1,000 steps to hatch Ember, a fire
-   dragon, or Marina, a water dragon. Desktop/web builds provide a test-step
-   button.
-8. Select the new dragon in the den to visit its dedicated volcanic or water
-   island. Care, grooming, flight XP, and contest progress remain attached to
+7. Open **Shop** from the main menu and spend one gold coin on a **Dragon Egg**.
+   It contains a random base dragon with individual attribute potentials. Start incubation and walk 5,000 steps
+   to reveal it. Desktop/web builds provide a test-step button.
+8. Select the new dragon in the den to visit its island. Care, grooming, flight XP, and contest progress remain attached to
    the selected dragon.
 
 Game state is saved locally between sessions.
 
 Use the gear button on the main menu to open **Settings**, switch between
 English and German, or reset all game progress after a confirmation step.
-Loading an older save also removes duplicate dragon types while retaining the
-starter and the highest care and training values.
+Older saves gain individual attribute potentials while retaining their dragons and progress.
+Multiple dragons of the same type are supported. Open **Stats / Werte** in a dragon’s
+habitat to train attack power, attack speed, and movement speed up to their limits.
+Fusion lets you select one parent’s potential per attribute; offspring start untrained.
 
 ## Run
 
@@ -59,22 +59,35 @@ when you also want the full device-and-Simulator validation pass.
 
 ## Project documentation
 
+- [DraGO: Produktanforderungen und Implementierungsplan (Originalbericht)](docs/requirements/DRAGO_PRODUKTANFORDERUNGEN_UND_IMPLEMENTIERUNGSPLAN.html)
+
+- [Soll-Ist-Abgleich zum Produktbericht](docs/requirements/SOLL_IST_ABGLEICH.md)
 - [Intended gameplay loop and progression](docs/GAMEPLAY_LOOP.md)
 - [Architecture and module boundaries](docs/ARCHITECTURE.md)
+- [Modular breeding and talent architecture](docs/BREEDING_AND_TALENTS_ARCHITECTURE.md)
 - [Flight training, contest, and reward rules](docs/FLIGHT_GAMEPLAY.md)
-- [Frost egg, ice dragon, and winter island](docs/ICE_DRAGON.md)
+- [Frosteros, ice dragon, and winter island](docs/ICE_DRAGON.md)
 - [Native iOS/Android build pipeline](docs/MOBILE_PIPELINE.md)
 - [Step-counter plugin contract](native/README.md)
 
-Run the gameplay and domain tests without opening a window:
+During assistant work, use only headless Godot checks with an explicit writable
+log file (for example `--headless --log-file /tmp/dragos-test.log`). Do not launch
+windowed Godot, the editor, or screenshot/render checks unless the user requests
+a visual run; these launches interrupt their other work. Do not stop an existing
+Godot process. A captured macOS crash from an assistant-launched graphical process
+occurred during AppKit application registration, before game startup.
+
+Run the deterministic project tests without opening a window:
 
 ```sh
 /Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --path . --script tests/smoke_test.gd
+  --headless --log-file /tmp/dragos-test.log --path . --script tests/smoke_test.gd
 /Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --path . --script tests/domain_test.gd
+  --headless --log-file /tmp/dragos-test.log --path . --script tests/domain_test.gd
 /Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --path . --script tests/screen_routing_test.gd
+  --headless --log-file /tmp/dragos-test.log --path . --script tests/screen_routing_test.gd
+/Applications/Godot.app/Contents/MacOS/Godot \
+  --headless --log-file /tmp/dragos-test.log --path . --script tests/font_coverage_test.gd
 ```
 
 ## Installable Web App
