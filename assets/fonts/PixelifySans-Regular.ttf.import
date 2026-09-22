@@ -13,7 +13,7 @@ dest_files=["res://.godot/imported/PixelifySans-Regular.ttf-c88f2ece69e4b1dab08f
 [params]
 
 Rendering=null
-antialiasing=1
+antialiasing=0
 generate_mipmaps=false
 disable_embedded_bitmaps=true
 multichannel_signed_distance_field=false
