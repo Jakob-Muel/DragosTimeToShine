@@ -58,9 +58,10 @@ Legend: **Done** works end to end · **Partial** exists with known gaps · **Mis
 5. **Save writes are not atomic.** `save_game()` overwrites the file directly; a crash
    mid-write can lose the save. No backup or checksum.
 6. **CI gaps.** `starter_progression`, `random_eggs`, `attribute_genetics`,
-   `flame_shooter`, `ui_safe_area` and `seeded_dragon` are not run in CI. Confirm that a
-   failed `assert` makes Godot exit non-zero in `--script` mode; otherwise CI can pass
-   on a failing test.
+   `flame_shooter`, `ui_safe_area` and `seeded_dragon` are not run in CI. A failed `assert`
+   makes Godot hang instead of exiting (verified 2026-09-22), and the CI steps have no
+   timeout, so a broken test would block the job for hours instead of failing fast.
+   All 12 headless suites passed on 2026-09-22 via `tools/agent_test.sh`.
 7. **Fusion species fallback.** Pairs without a recipe produce parent A's species; the
    child's look is a fresh random seed, so inheritance is not visible.
 8. **Routing is a hand-written match block** in `main.gd`; every new screen touches it.

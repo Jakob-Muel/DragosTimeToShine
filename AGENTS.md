@@ -48,16 +48,31 @@ and record the answer in `PRODUCT_DECISIONS.md`.
 
 ## 4. Commands
 
-Godot is not installed in cloud sandboxes. Tests can only run on the user's Mac or in CI.
+**From an agent sandbox (Linux, including the Cowork VM on the user's Mac):** run
+
+```sh
+tools/agent_test.sh            # all headless suites
+tools/agent_test.sh smoke domain
+```
+
+The macOS app in `/Applications` cannot run inside a Linux sandbox, so the script downloads
+the Linux build of Godot 4.6.1 into `~/godot`, copies the project to `~/work/proj` (the
+user's `.godot` cache and saves stay untouched), imports assets once (a few minutes the
+first time) and runs each suite with a timeout. It exits non-zero on any failure.
 Do not claim tests pass unless you ran them.
 
-On the user's Mac the binary is `/Applications/Godot.app/Contents/MacOS/Godot`.
+**On the user's Mac directly** the binary is `/Applications/Godot.app/Contents/MacOS/Godot`.
 Always run headless with an explicit writable log file:
 
 ```sh
 GODOT=/Applications/Godot.app/Contents/MacOS/Godot
 $GODOT --headless --log-file /tmp/dragos-test.log --path . --script tests/<name>_test.gd
 ```
+
+**A failed `assert` does not exit.** Godot prints `SCRIPT ERROR: Assertion failed` and then
+hangs, because `quit()` is never reached. Always run suites with a timeout and treat a
+timeout as a failure. Tests also fail if assets were never imported (missing
+`.godot/imported/...` errors); import first.
 
 Headless test suites (each prints `... valid` and quits on success):
 
