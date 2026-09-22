@@ -20,7 +20,11 @@ func _capture() -> void:
 		"android_compact":
 			target_size = Vector2i(1080, 2160)
 	var output_suffix := "" if args.size() <= 1 else "_" + profile
-	var output := "res://docs/screenshots/%s%s.png" % [screen_name, output_suffix]
+	var output := (
+		args[2]
+		if args.size() > 2
+		else "res://docs/screenshots/%s%s.png" % [screen_name, output_suffix]
+	)
 	var display_screen := screen_name
 	var capture_locale := ""
 	var game_state := root.get_node_or_null("GameState")
@@ -41,9 +45,15 @@ func _capture() -> void:
 	if not capture_locale.is_empty():
 		scene.call("debug_set_locale", capture_locale)
 		await process_frame
-	scene.call("debug_show_screen", display_screen)
+	var training_result := display_screen in ["flight_training_result", "flame_shooter_result"]
+	scene.call("debug_show_screen", display_screen.trim_suffix("_result") if training_result else display_screen)
 	await process_frame
 	await process_frame
+	if training_result:
+		var training_screen: GameScreen = scene.get("screen_router").active_screen
+		training_screen.get("game").complete_talent_run(25)
+		await process_frame
+		await process_frame
 	if display_screen == "fed":
 		scene.call("debug_show_screen", "habitat")
 		await process_frame
@@ -55,6 +65,12 @@ func _capture() -> void:
 		await create_timer(0.12).timeout
 	elif display_screen in ["flight_contest", "result"]:
 		await create_timer(1.15).timeout
+	for frame in 120:
+		if ProceduralDragonTextures.pending_renders == 0:
+			break
+		await process_frame
+	await process_frame
+	await RenderingServer.frame_post_draw
 	var image := capture_viewport.get_texture().get_image()
 	var error := image.save_png(output)
 	if error != OK:

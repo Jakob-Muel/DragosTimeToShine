@@ -2,14 +2,14 @@ extends SceneTree
 
 const DRAGON_PRESENTATION := preload("res://scripts/ui/dragon_presentation.gd")
 const DRAGON_TEXTURES := [
-	preload("res://assets/art/dragon_pink_hd.png"),
-	preload("res://assets/art/fire/fire_dragon_hd.png"),
-	preload("res://assets/art/water/water_dragon_hd.png"),
-	preload("res://assets/art/earth/earth_dragon_hd.png"),
-	preload("res://assets/art/ice/ice_dragon_alpha.png"),
-	preload("res://assets/art/fusion/lava/lavara_dragon_hd.png"),
-	preload("res://assets/art/fusion/mud/mudara_dragon_hd.png"),
-	preload("res://assets/art/fusion/voltara_dragon_hd.png"),
+	preload("res://assets/art/comic/dragon_pink_hd.png"),
+	preload("res://assets/art/comic/fire/fire_dragon_hd.png"),
+	preload("res://assets/art/comic/water/water_dragon_hd.png"),
+	preload("res://assets/art/comic/earth/earth_dragon_hd.png"),
+	preload("res://assets/art/comic/ice/ice_dragon_alpha.png"),
+	preload("res://assets/art/comic/fusion/lava/lavara_dragon_hd.png"),
+	preload("res://assets/art/comic/fusion/mud/mudara_dragon_hd.png"),
+	preload("res://assets/art/comic/fusion/voltara_dragon_hd.png"),
 ]
 
 
@@ -27,7 +27,7 @@ func _run() -> void:
 func _assert_shadow_tracks_visible_feet(texture: Texture2D) -> void:
 	var presentation: Control = DRAGON_PRESENTATION.new()
 	presentation.size = Vector2(250, 224)
-	presentation.call("configure", texture, CanvasItem.TEXTURE_FILTER_NEAREST)
+	presentation.call("configure", texture, CanvasItem.TEXTURE_FILTER_LINEAR)
 	root.add_child(presentation)
 
 	var shadow: Control = presentation.get("shadow")

@@ -19,27 +19,23 @@ func _run() -> void:
 	assert(scene.get("current_screen") == "den")
 	game_state.gold = 1
 	scene.call("_show_shop")
-	assert(game_state.can_purchase_egg("fire"), "The Fire Egg must be selectable for one gold.")
-	assert(game_state.can_purchase_egg("water"), "The Water Egg must be selectable for one gold.")
-	assert(game_state.can_purchase_egg("earth"), "The Earth Egg must be selectable for one gold.")
-	assert(not game_state.can_purchase_egg("ice"), "The Frost Egg must stay outside the active shop.")
-	scene.call("_purchase_egg", "fire")
-	assert(game_state.eggs.size() == 1, "One gold coin must purchase an egg.")
-	assert(
-		game_state.eggs[0].get("definition_id") == "ember",
-		"The Fire Egg must reserve the unowned Ember dragon."
-	)
+	assert(game_state.can_purchase_egg(), "The single random egg must be purchasable.")
+	assert(not game_state.can_purchase_egg("fire"), "Element-specific purchases are removed.")
+	scene.call("_purchase_egg")
+	assert(game_state.eggs.size() == 1, "One gold purchases one egg.")
+	# Fix the hidden outcome only in this fixture to exercise fire/water/earth care and fusion.
+	game_state.eggs[0]["definition_id"] = "ember"
 	assert(game_state.gold == 0, "Purchasing an egg must consume one gold coin.")
 	assert(scene.get("current_screen") == "egg_detail")
 
 	scene.call("_start_current_egg")
-	for _stroke in 4:
+	for _stroke in 20:
 		step_counter.add_mock_steps(250)
 		scene.call("_refresh_current_egg_steps")
 		await process_frame
 		await process_frame
 	var egg_id: String = scene.get("current_egg_id")
-	assert(game_state.can_hatch(egg_id), "1,000 mock steps must make the egg hatchable.")
+	assert(game_state.can_hatch(egg_id), "5,000 mock steps must make the egg hatchable.")
 	scene.call("_hatch_current_egg")
 	assert(game_state.dragons.size() == 2, "Hatching must add a dragon.")
 	assert(game_state.eggs.is_empty(), "Hatching must consume the egg.")
@@ -54,12 +50,12 @@ func _run() -> void:
 	assert(scene.get("current_screen") == "habitat")
 	var habitat_screen: Control = scene.get("screen_router").active_screen
 	assert(
-		String(habitat_screen.get("active_dragon_texture").resource_path).ends_with("fire_dragon_hd.png"),
-		"The fire dragon must use its own habitat sprite."
+		int(habitat_screen.get("active_dragon_texture").get_meta("dragon_seed", 0)) == ProceduralDragonTextures.seed_for(game_state.get_dragon(String(habitat_screen.get("selected_dragon_id")))),
+		"Every dragon must retain its procedural seed and use the shared island."
 	)
 	assert(
-		String(habitat_screen.get("active_island_texture").resource_path).ends_with("fire_island_hd.png"),
-		"The fire dragon must use its own island."
+		String(habitat_screen.get("active_island_texture").resource_path).ends_with("universal_island.png"),
+		"Every dragon must retain its procedural seed and use the shared island."
 	)
 	assert(
 		_contains_texture(habitat_screen, "sunberry.png"),
@@ -110,7 +106,7 @@ func _run() -> void:
 		is_equal_approx(float(minigame.get("obstacles")[0].get("gap_height")), 300.0),
 		"The first spawned opening must be 300 pixels high."
 	)
-	assert(minigame.get("dragon").flip_h, "The training dragon must face the direction of travel.")
+	assert(not minigame.get("dragon").flip_h, "The procedural flight view already faces right and must not be mirrored.")
 	for _obstacle_index in 24:
 		var previous_gap := float(minigame.get("last_gap_center"))
 		minigame.call("_spawn_obstacle_pair")
@@ -201,7 +197,7 @@ func _run() -> void:
 			break
 	assert(training_game != null, "Flight Training must contain its flight game.")
 	assert(
-		String(training_game.get("dragon").texture.resource_path).ends_with("ember_flight.png"),
+		int(training_game.get("dragon").texture.get_meta("dragon_seed", 0)) == ProceduralDragonTextures.seed_for(game_state.get_dragon(fire_dragon_id)),
 		"Flight Training must use the selected dragon's small flight sprite."
 	)
 	for score in 50:
@@ -226,40 +222,42 @@ func _run() -> void:
 	)
 	assert(
 		game_state.purchase_egg("ice").is_empty(),
-		"The preserved Frost definition must not be purchasable in the active game flow."
+		"The preserved Frosteros definition must not be purchasable in the active game flow."
 	)
 	assert(game_state.gold == 1, "A rejected duplicate egg purchase must not spend gold.")
 
-	var water_egg_id: String = game_state.purchase_egg("water")
+	var water_egg_id: String = game_state.purchase_egg()
 	assert(not water_egg_id.is_empty(), "The Water Egg must be purchasable for one gold.")
 	assert(game_state.gold == 0, "The Water Egg must cost exactly one gold.")
+	game_state.eggs[0]["definition_id"] = "marina"
 	game_state.start_incubation(water_egg_id, 0)
 	game_state.update_egg_progress(water_egg_id, game_state.EGG_REQUIRED_STEPS)
-	assert(game_state.hatch_egg(water_egg_id), "The Water Egg must hatch after 1,000 steps.")
+	assert(game_state.hatch_egg(water_egg_id), "The Water Egg must hatch after 5,000 steps.")
 	var water_dragon: Dictionary = game_state.dragons[2]
 	assert(water_dragon.get("definition_id") == "marina", "The Water Egg must hatch Marina.")
 	assert(game_state.dragon_has_type(water_dragon, &"water"), "Marina must have the water type.")
 	scene.call("_select_dragon", String(water_dragon.get("id")))
 	habitat_screen = scene.get("screen_router").active_screen
 	assert(
-		String(habitat_screen.get("active_dragon_texture").resource_path).ends_with("water_dragon_hd.png"),
-		"The water dragon must use its own habitat sprite."
+		int(habitat_screen.get("active_dragon_texture").get_meta("dragon_seed", 0)) == ProceduralDragonTextures.seed_for(game_state.get_dragon(String(habitat_screen.get("selected_dragon_id")))),
+		"Every dragon must retain its procedural seed and use the shared island."
 	)
 	assert(
-		String(habitat_screen.get("active_island_texture").resource_path).ends_with("water_island_hd.png"),
-		"The water dragon must use its own island."
+		String(habitat_screen.get("active_island_texture").resource_path).ends_with("universal_island.png"),
+		"Every dragon must retain its procedural seed and use the shared island."
 	)
 	game_state.add_flight_xp(fire_dragon_id, 20)
 	assert(game_state.can_enter_flight_contest(fire_dragon_id), "Flight Level 7 must unlock the 70 m contest.")
 	assert(game_state.complete_flight_contest(fire_dragon_id, 70) == 1, "Winning at 70 m must award one gold.")
 	assert(game_state.flight_contest_wins(fire_dragon_id) == 2, "The second contest win must be saved.")
 	assert(game_state.flight_contest_goal(fire_dragon_id) == 100, "The third contest goal must be 100 m.")
-	var earth_egg_id: String = game_state.purchase_egg("earth")
+	var earth_egg_id: String = game_state.purchase_egg()
 	assert(not earth_egg_id.is_empty(), "The Earth Egg must be purchasable for one gold.")
 	assert(game_state.gold == 0, "The Earth Egg must cost exactly one gold.")
+	game_state.eggs[0]["definition_id"] = "terra"
 	game_state.start_incubation(earth_egg_id, 0)
 	game_state.update_egg_progress(earth_egg_id, game_state.EGG_REQUIRED_STEPS)
-	assert(game_state.hatch_egg(earth_egg_id), "The Earth Egg must hatch after 1,000 steps.")
+	assert(game_state.hatch_egg(earth_egg_id), "The Earth Egg must hatch after 5,000 steps.")
 	var earth_dragon: Dictionary = game_state.dragons[3]
 	assert(earth_dragon.get("definition_id") == "terra", "The Earth Egg must hatch Terra.")
 	assert(game_state.dragon_has_type(earth_dragon, &"earth"), "Terra must have the earth type.")
@@ -267,11 +265,11 @@ func _run() -> void:
 	scene.call("_select_dragon", String(earth_dragon.get("id")))
 	habitat_screen = scene.get("screen_router").active_screen
 	assert(
-		String(habitat_screen.get("active_dragon_texture").resource_path).ends_with("earth_dragon_hd.png"),
-		"The earth dragon must use its own habitat sprite."
+		int(habitat_screen.get("active_dragon_texture").get_meta("dragon_seed", 0)) == ProceduralDragonTextures.seed_for(game_state.get_dragon(String(habitat_screen.get("selected_dragon_id")))),
+		"Every dragon must retain its procedural seed and use the shared island."
 	)
 	assert(
-		String(habitat_screen.get("active_island_texture").resource_path).ends_with("earth_island_hd.png"),
+		String(habitat_screen.get("active_island_texture").resource_path).ends_with("universal_island.png"),
 		"The earth dragon must use its own desert island."
 	)
 	game_state.add_flight_xp(fire_dragon_id, 30)
@@ -310,19 +308,19 @@ func _run() -> void:
 		"The Fusion Egg must require 5,000 steps."
 	)
 	assert(
-		String(game_state.egg_texture(fusion_egg).resource_path).ends_with("fusion_egg.png"),
+		String(game_state.egg_texture(fusion_egg).resource_path).ends_with("sun_egg.png"),
 		"The Fusion Egg must use its own sprite."
 	)
 	assert(
 		game_state.fusion_eligibility_error(
 			String(fire_dragon.get("id")),
 			String(water_dragon.get("id"))
-		) == &"fusion_pending",
-		"A waiting Fusion Egg must block duplicate fusion."
+		) == &"",
+		"Repeated breeding is allowed while there is space and currency."
 	)
 	game_state.start_incubation(fusion_egg_id, 0)
-	game_state.update_egg_progress(fusion_egg_id, game_state.EGG_REQUIRED_STEPS)
-	assert(not game_state.can_hatch(fusion_egg_id), "The Fusion Egg must not hatch after only 1,000 steps.")
+	game_state.update_egg_progress(fusion_egg_id, game_state.FUSION_EGG_REQUIRED_STEPS - 1)
+	assert(not game_state.can_hatch(fusion_egg_id), "The Fusion Egg must not hatch after only 4,999 steps.")
 	game_state.update_egg_progress(fusion_egg_id, game_state.FUSION_EGG_REQUIRED_STEPS)
 	assert(game_state.hatch_egg(fusion_egg_id), "The Fusion Egg must hatch after 5,000 steps.")
 	assert(game_state.eggs.is_empty(), "Hatching must consume the Fusion Egg.")
@@ -338,18 +336,18 @@ func _run() -> void:
 		game_state.fusion_eligibility_error(
 			String(fire_dragon.get("id")),
 			String(water_dragon.get("id"))
-		) == &"already_owned",
+		) == &"",
 		"The same fusion dragon must not be creatable twice."
 	)
 	scene.call("_select_dragon", String(fusion_dragon.get("id")))
 	habitat_screen = scene.get("screen_router").active_screen
 	assert(
-		String(habitat_screen.get("active_dragon_texture").resource_path).ends_with("voltara_dragon_hd.png"),
-		"The fusion dragon must use its own habitat sprite."
+		int(habitat_screen.get("active_dragon_texture").get_meta("dragon_seed", 0)) == ProceduralDragonTextures.seed_for(game_state.get_dragon(String(habitat_screen.get("selected_dragon_id")))),
+		"Every dragon must retain its procedural seed and use the shared island."
 	)
 	assert(
-		String(habitat_screen.get("active_island_texture").resource_path).ends_with("voltara_island_hd.png"),
-		"The fusion dragon must use its own island."
+		String(habitat_screen.get("active_island_texture").resource_path).ends_with("universal_island.png"),
+		"Every dragon must retain its procedural seed and use the shared island."
 	)
 	var lava_egg_id: String = game_state.fuse_dragons(
 		String(fire_dragon.get("id")),
@@ -363,7 +361,7 @@ func _run() -> void:
 		"Lavara's Fusion Egg must require 5,000 steps."
 	)
 	assert(
-		String(game_state.egg_texture(lava_egg).resource_path).ends_with("lavara_egg.png"),
+		String(game_state.egg_texture(lava_egg).resource_path).ends_with("sun_egg.png"),
 		"Lavara's Fusion Egg must use its own sprite."
 	)
 	assert(game_state.fusion_stars == 1, "The Lava fusion must consume one Fusion Star.")
@@ -375,11 +373,11 @@ func _run() -> void:
 	scene.call("_select_dragon", String(lava_dragon.get("id")))
 	habitat_screen = scene.get("screen_router").active_screen
 	assert(
-		String(habitat_screen.get("active_dragon_texture").resource_path).ends_with("lavara_dragon_hd.png"),
+		int(habitat_screen.get("active_dragon_texture").get_meta("dragon_seed", 0)) == ProceduralDragonTextures.seed_for(game_state.get_dragon(String(habitat_screen.get("selected_dragon_id")))),
 		"Lavara must use the Lava dragon sprite."
 	)
 	assert(
-		String(habitat_screen.get("active_island_texture").resource_path).ends_with("lavara_island_hd.png"),
+		String(habitat_screen.get("active_island_texture").resource_path).ends_with("universal_island.png"),
 		"Lavara must use the volcanic desert island."
 	)
 	var mud_egg_id: String = game_state.fuse_dragons(
@@ -394,7 +392,7 @@ func _run() -> void:
 		"Mudara's Fusion Egg must require 5,000 steps."
 	)
 	assert(
-		String(game_state.egg_texture(mud_egg).resource_path).ends_with("mudara_egg.png"),
+		String(game_state.egg_texture(mud_egg).resource_path).ends_with("sun_egg.png"),
 		"Mudara's Fusion Egg must use its own sprite."
 	)
 	assert(game_state.fusion_stars == 0, "The Mud fusion must consume the final Fusion Star.")
@@ -406,11 +404,11 @@ func _run() -> void:
 	scene.call("_select_dragon", String(mud_dragon.get("id")))
 	habitat_screen = scene.get("screen_router").active_screen
 	assert(
-		String(habitat_screen.get("active_dragon_texture").resource_path).ends_with("mudara_dragon_hd.png"),
+		int(habitat_screen.get("active_dragon_texture").get_meta("dragon_seed", 0)) == ProceduralDragonTextures.seed_for(game_state.get_dragon(String(habitat_screen.get("selected_dragon_id")))),
 		"Mudara must use the Mud dragon sprite."
 	)
 	assert(
-		String(habitat_screen.get("active_island_texture").resource_path).ends_with("mudara_island_hd.png"),
+		String(habitat_screen.get("active_island_texture").resource_path).ends_with("universal_island.png"),
 		"Mudara must use the marsh island."
 	)
 	assert(
@@ -487,15 +485,15 @@ func _run() -> void:
 			{"id": "pending-fire-b", "definition_id": "ember"},
 		],
 	})
-	assert(game_state.dragons.size() == 2, "Duplicate dragon types in legacy saves must be collapsed.")
+	assert(game_state.dragons.size() == 3, "Distinct dragons of the same type must survive migration.")
 	assert(game_state.get_dragon("luma").get("definition_id") == "luma", "The starter must win a duplicate type conflict.")
-	assert(game_state.get_training_xp("luma", &"flight") == 23, "Duplicate cleanup must preserve the highest training XP.")
-	assert(game_state.get_dragon_hunger("luma") == 91, "Duplicate cleanup must preserve the highest care values.")
+	assert(game_state.get_training_xp("luma", &"flight") == 4, "Duplicate cleanup must preserve the highest training XP.")
+	assert(game_state.get_dragon_hunger("luma") == 81, "Duplicate cleanup must preserve the highest care values.")
 	assert(game_state.get_dragon("legacy-frost").get("definition_id") == "frost", "Legacy species must migrate to definitions.")
 	assert(game_state.get_training_xp("legacy-frost", &"flight") == 17, "Legacy Flight XP must migrate by category.")
 	assert(game_state.get_dragon_hunger("legacy-frost") == 81, "Legacy shared care must migrate onto each dragon.")
-	assert(game_state.eggs.size() == 1, "Owned and duplicate pending dragon types must be removed.")
-	assert(game_state.eggs[0].get("definition_id") == "ember", "One valid pending Fire Egg must remain.")
+	assert(game_state.eggs.size() == 3, "All distinct eggs must survive migration.")
+	assert(game_state.eggs[1].get("definition_id") == "ember", "The pending Fire Egg must remain.")
 	assert(game_state.serialize_state().get("currencies", {}).get("fusion_stars") == 3, "Legacy saves must gain all three Fusion Stars.")
 
 	scene.call("_show_settings")
@@ -504,10 +502,9 @@ func _run() -> void:
 	settings_screen.call("_on_reset_pressed")
 	assert(scene.get("current_screen") == "settings", "Reset must require a second confirmation press.")
 	settings_screen.call("_on_reset_pressed")
-	assert(scene.get("current_screen") == "main", "Confirmed reset must return to the starting screen.")
-	assert(game_state.dragons.size() == 1, "Reset must restore the single starter dragon.")
-	assert(game_state.dragons[0].get("definition_id") == "luma", "Reset must restore Luma.")
-	assert(game_state.eggs.is_empty(), "Reset must remove every egg.")
+	assert(scene.get("current_screen") == "egg_detail", "Reset must open the starter egg.")
+	assert(game_state.dragons.is_empty(), "Reset must start without a dragon.")
+	assert(game_state.eggs.size() == 1 and game_state.can_hatch("starter-egg"), "Reset grants one instantly hatchable egg.")
 	assert(game_state.gems == 125 and game_state.gold == 0, "Reset must restore starting currencies.")
 	assert(game_state.fusion_stars == 3, "Reset must restore all starting Fusion Stars.")
 

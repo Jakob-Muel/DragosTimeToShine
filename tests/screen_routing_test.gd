@@ -35,6 +35,8 @@ func _run() -> void:
 	_assert_route(scene, "flight_hub")
 	scene.call("_show_flight_training")
 	_assert_route(scene, "flight_training")
+	scene.call("_show_flame_shooter")
+	_assert_route(scene, "flame_shooter")
 	scene.call("_show_dragon_lab")
 	_assert_route(scene, "dragon_lab")
 	game_state.add_flight_xp(
