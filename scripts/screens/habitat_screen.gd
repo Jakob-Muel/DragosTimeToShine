@@ -1,12 +1,10 @@
 extends GameScreen
 
 const PIXEL_ART := preload("res://scripts/ui/pixel_art.gd")
-const DRAGON_TEXTURE := preload("res://assets/art/dragon_pink_hd.png")
-const ISLAND_TEXTURE := preload("res://assets/art/dragon_island_hd.png")
-const ICE_DRAGON_TEXTURE := preload("res://assets/art/ice/ice_dragon_alpha.png")
-const ICE_ISLAND_TEXTURE := preload("res://assets/art/ice/ice_island_hd.png")
-const SUNBERRY_TEXTURE := preload("res://assets/art/ui_redesign/icons/sunberry.png")
-const GROOMING_COMB_TEXTURE := preload("res://assets/art/ui_redesign/icons/grooming_comb.png")
+const ISLAND_TEXTURE := preload("res://assets/art/comic/dragon_island_hd.png")
+const ICE_ISLAND_TEXTURE := preload("res://assets/art/comic/ice/ice_island_hd.png")
+const SUNBERRY_TEXTURE := preload("res://assets/art/comic/ui_redesign/icons/sunberry.png")
+const GROOMING_COMB_TEXTURE := preload("res://assets/art/comic/ui_redesign/icons/grooming_comb.png")
 const DRAGON_FOOT_ANCHOR := Vector2(105.0, 218.0)
 
 const PINK := UiTokens.PINK
@@ -21,7 +19,7 @@ const GOLD := UiTokens.GOLD
 const FONT_BOLD := UiTokens.FONT_BOLD
 
 var selected_dragon_id := "luma"
-var active_dragon_texture: Texture2D = DRAGON_TEXTURE
+var active_dragon_texture: Texture2D
 var active_island_texture: Texture2D = ISLAND_TEXTURE
 var dragon_actor: Control
 var dragon_presentation: Control
@@ -70,10 +68,7 @@ func selected_dragon_name() -> String:
 
 
 func dragon_texture_for(dragon_data: Dictionary) -> Texture2D:
-	var texture := GameState.dragon_texture(dragon_data)
-	if texture != null:
-		return texture
-	return ICE_DRAGON_TEXTURE if GameState.dragon_has_type(dragon_data, &"ice") else DRAGON_TEXTURE
+	return GameState.dragon_texture(dragon_data)
 
 
 func island_texture_for(dragon_data: Dictionary) -> Texture2D:
@@ -85,6 +80,14 @@ func island_texture_for(dragon_data: Dictionary) -> Texture2D:
 
 func island_vertical_offset() -> float:
 	return clampf((canvas_size.y - 1280.0) * 0.5, 0.0, 180.0)
+
+
+func _island_point(source_point: Vector2) -> Vector2:
+	# Match KEEP_ASPECT_COVERED exactly so feet and food remain on the meadow
+	# on short and tall phones alike. Coordinates refer to the comic island art.
+	var art_size := Vector2(720, 1565)
+	var factor := maxf(canvas_size.x / art_size.x, canvas_size.y / art_size.y)
+	return (canvas_size - art_size * factor) * 0.5 + source_point * factor
 
 
 func _go_dragons() -> void:
@@ -100,7 +103,7 @@ func build() -> void:
 	var top_shift := safe_top_y(32.0) - 32.0
 	bob_time = 0.0
 	var dragon_data := selected_dragon_data()
-	var uses_pixel_filter := not GameState.dragon_has_type(dragon_data, &"sunwing")
+
 	var accent := _dragon_accent_color(dragon_data)
 	active_dragon_texture = dragon_texture_for(dragon_data)
 	active_island_texture = island_texture_for(dragon_data)
@@ -112,9 +115,9 @@ func build() -> void:
 	var background := WidgetFactory.texture_rect(
 		active_island_texture,
 		Rect2(0, 0, canvas_size.x, canvas_size.y),
-		TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	)
-	background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if uses_pixel_filter else CanvasItem.TEXTURE_FILTER_LINEAR
+	background.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(background)
 
 	var top_panel := Panel.new()
@@ -139,15 +142,15 @@ func build() -> void:
 		20,
 		INK_SOFT,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	level.position = Vector2(92, 59)
 	level.size = Vector2(470, 28)
 	top_panel.add_child(level)
-	var hearts := WidgetFactory.label("♥", 35, accent, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
-	hearts.position = Vector2(580, 21)
-	hearts.size = Vector2(65, 50)
-	top_panel.add_child(hearts)
+	var attributes := WidgetFactory.small_button(tr_text("ATTRIBUTES_SHORT"), Rect2(563, 20, 100, 65), CREAM)
+	attributes.add_theme_font_size_override("font_size", 18)
+	attributes.pressed.connect(navigate.bind("attributes", {"selected_dragon_id": selected_dragon_id}))
+	top_panel.add_child(attributes)
 
 	var tip := Panel.new()
 	tip.position = Vector2(116, 157 + top_shift)
@@ -163,7 +166,7 @@ func build() -> void:
 	tip.add_child(tip_berry)
 
 	dragon_actor = Control.new()
-	dragon_actor.position = Vector2(255, 407 + island_vertical_offset())
+	dragon_actor.position = _island_point(Vector2(360, 755)) - DRAGON_FOOT_ANCHOR
 	dragon_actor.size = Vector2(250, 250)
 	dragon_actor.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dragon_actor.z_index = 650
@@ -172,9 +175,7 @@ func build() -> void:
 	dragon_presentation = WidgetFactory.dragon_presentation(
 		active_dragon_texture,
 		Rect2(0, 0, 250, 224),
-		CanvasItem.TEXTURE_FILTER_NEAREST
-		if uses_pixel_filter
-		else CanvasItem.TEXTURE_FILTER_LINEAR
+		CanvasItem.TEXTURE_FILTER_LINEAR
 	)
 	dragon_actor.add_child(dragon_presentation)
 
@@ -200,7 +201,13 @@ func build() -> void:
 	hunger_title.position = Vector2(62, 64)
 	hunger_title.size = Vector2(140, 30)
 	bottom.add_child(hunger_title)
-	hunger_label = WidgetFactory.label("%d%%" % hunger, 21, INK, HORIZONTAL_ALIGNMENT_RIGHT, FONT_BOLD)
+	hunger_label = WidgetFactory.label(
+		"%d%%" % hunger,
+		21,
+		INK,
+		HORIZONTAL_ALIGNMENT_RIGHT,
+		UiTokens.FONT_NUMERIC
+	)
 	hunger_label.position = Vector2(542, 64)
 	hunger_label.size = Vector2(96, 30)
 	bottom.add_child(hunger_label)
@@ -219,7 +226,13 @@ func build() -> void:
 	clean_title.position = Vector2(62, 145)
 	clean_title.size = Vector2(140, 30)
 	bottom.add_child(clean_title)
-	clean_label = WidgetFactory.label("%d%%" % floori(cleanliness), 21, INK, HORIZONTAL_ALIGNMENT_RIGHT, FONT_BOLD)
+	clean_label = WidgetFactory.label(
+		"%d%%" % floori(cleanliness),
+		21,
+		INK,
+		HORIZONTAL_ALIGNMENT_RIGHT,
+		UiTokens.FONT_NUMERIC
+	)
 	clean_label.position = Vector2(542, 145)
 	clean_label.size = Vector2(96, 30)
 	bottom.add_child(clean_label)
@@ -232,7 +245,13 @@ func build() -> void:
 	clean_bar.add_theme_stylebox_override("fill", WidgetFactory.panel_style(MINT, INK, 8, 0))
 	bottom.add_child(clean_bar)
 
-	care_label = WidgetFactory.label(tr_text("CARE_POINTS", {"value": care_points}), 21, INK_SOFT, HORIZONTAL_ALIGNMENT_LEFT, FONT_BOLD)
+	care_label = WidgetFactory.label(
+		tr_text("CARE_POINTS", {"value": care_points}),
+		21,
+		INK_SOFT,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		UiTokens.FONT_NUMERIC
+	)
 	care_label.position = Vector2(26, 229)
 	care_label.size = Vector2(270, 32)
 	bottom.add_child(care_label)
@@ -320,10 +339,10 @@ func _feed_dragon() -> void:
 		return
 	walking = true
 	feed_button.disabled = true
-	var target := Vector2(
-		random.randf_range(155.0, 565.0),
-		random.randf_range(500.0 + island_vertical_offset(), 790.0 + island_vertical_offset())
-	)
+	var target := _island_point(Vector2(
+		random.randf_range(300.0, 505.0),
+		random.randf_range(718.0, 798.0)
+	))
 	var berry := WidgetFactory.pixel_icon(
 		SUNBERRY_TEXTURE,
 		Rect2(target - Vector2(32, 210), Vector2(64, 64))
@@ -368,7 +387,13 @@ func _feed_dragon() -> void:
 	feed_button.disabled = false
 
 func show_care_pop(at_position: Vector2) -> void:
-	var pop := WidgetFactory.label(tr_text("CARE_POP"), 27, PINK_DARK, HORIZONTAL_ALIGNMENT_CENTER, FONT_BOLD)
+	var pop := WidgetFactory.label(
+		tr_text("CARE_POP"),
+		27,
+		PINK_DARK,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		UiTokens.FONT_NUMERIC
+	)
 	pop.position = at_position + Vector2(-90, -120)
 	pop.size = Vector2(180, 44)
 	pop.z_index = 1200

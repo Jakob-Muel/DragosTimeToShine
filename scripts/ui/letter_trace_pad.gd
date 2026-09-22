@@ -5,8 +5,8 @@ signal letter_completed(letter: String)
 
 const TRACE_RADIUS := 40.0
 const REQUIRED_COVERAGE := 0.72
-const GUIDE_OUTLINE := Color(0.18, 0.13, 0.25, 0.28)
-const GUIDE_FILL := Color(1.0, 0.95, 0.79, 0.72)
+const GUIDE_OUTLINE := Color("#c6b7ae")
+const GUIDE_FILL := Color("#f3e5bb")
 const TRACE_OUTLINE := Color("#2f2140")
 const TRACE_COLOR := Color("#ffc857")
 
@@ -170,13 +170,17 @@ func _points(normalized_points: Array[Vector2]) -> PackedVector2Array:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("#fff8e8"))
-	draw_rect(Rect2(Vector2.ZERO, size), TRACE_OUTLINE, false, 6.0)
+	var frame := WidgetFactory.panel_style(UiTokens.WHITE, UiTokens.INK, 24, 0)
+	draw_style_box(frame, Rect2(Vector2.ZERO, size))
 	for stroke: PackedVector2Array in guide_strokes:
 		if stroke.size() < 2:
 			continue
 		draw_polyline(stroke, GUIDE_OUTLINE, 34.0, true)
+		for point in stroke:
+			draw_circle(point, 17, GUIDE_OUTLINE, true, -1, true)
 		draw_polyline(stroke, GUIDE_FILL, 20.0, true)
+		for point in stroke:
+			draw_circle(point, 10, GUIDE_FILL, true, -1, true)
 	for index in guide_samples.size():
 		if covered_samples[index]:
 			draw_circle(guide_samples[index], 5.0, Color("#68c783"))
@@ -192,7 +196,11 @@ func _draw_trace_path(path: PackedVector2Array) -> void:
 		draw_circle(path[0], 10.0, TRACE_COLOR)
 		return
 	draw_polyline(path, TRACE_OUTLINE, 24.0, true)
+	for point in path:
+		draw_circle(point, 12, TRACE_OUTLINE, true, -1, true)
 	draw_polyline(path, TRACE_COLOR, 14.0, true)
+	for point in path:
+		draw_circle(point, 7, TRACE_COLOR, true, -1, true)
 
 
 func _emit_completed() -> void:

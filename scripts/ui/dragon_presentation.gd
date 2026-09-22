@@ -22,11 +22,21 @@ func configure(
 	texture_value: Texture2D,
 	filter_value := CanvasItem.TEXTURE_FILTER_LINEAR
 ) -> void:
+	if _texture != null and _texture.changed.is_connected(_texture_changed):
+		_texture.changed.disconnect(_texture_changed)
 	_texture = texture_value
+	if _texture != null:
+		_texture.changed.connect(_texture_changed)
 	_texture_filter = filter_value
 	_ensure_children()
 	sprite.texture = _texture
 	sprite.texture_filter = _texture_filter
+	_layout_presentation()
+
+
+func _texture_changed() -> void:
+	var key := _texture.resource_path if not _texture.resource_path.is_empty() else str(_texture.get_instance_id())
+	_visible_bounds_cache.erase(key)
 	_layout_presentation()
 
 

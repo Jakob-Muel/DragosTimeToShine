@@ -1,21 +1,21 @@
-extends Control
+extends "res://scripts/ui/talent_minigame.gd"
 
-signal score_changed(score: int)
 signal run_finished(score: int, completed: bool)
 
-const DRAGON_TEXTURE := preload("res://assets/art/flight/flight_dragon.png")
+const SKY := preload("res://assets/art/comic/sky.png")
+const MOUNTAINS := preload("res://assets/art/comic/ui_redesign/flight_environment/mountains.png")
 const FLIGHT_PILLAR := preload("res://scripts/ui/flight_pillar.gd")
 const LARGE_CLOUDS := [
-	preload("res://assets/art/ui_redesign/clouds/large_wide.png"),
-	preload("res://assets/art/ui_redesign/clouds/large_tall.png"),
-	preload("res://assets/art/ui_redesign/clouds/large_wisp.png"),
+	preload("res://assets/art/comic/ui_redesign/clouds/large_wide.png"),
+	preload("res://assets/art/comic/ui_redesign/clouds/large_tall.png"),
+	preload("res://assets/art/comic/ui_redesign/clouds/large_wisp.png"),
 ]
 const SMALL_CLOUDS := [
-	preload("res://assets/art/ui_redesign/clouds/small_wide.png"),
-	preload("res://assets/art/ui_redesign/clouds/small_tall.png"),
-	preload("res://assets/art/ui_redesign/clouds/small_wisp.png"),
+	preload("res://assets/art/comic/ui_redesign/clouds/small_wide.png"),
+	preload("res://assets/art/comic/ui_redesign/clouds/small_tall.png"),
+	preload("res://assets/art/comic/ui_redesign/clouds/small_wisp.png"),
 ]
-const LANDSCAPE := preload("res://assets/art/ui_redesign/flight_environment/landscape.png")
+const LANDSCAPE := preload("res://assets/art/comic/ui_redesign/flight_environment/landscape.png")
 const DRAGON_SIZE := Vector2(156, 98)
 const DRAGON_X := 105.0
 const GRAVITY := 820.0
@@ -48,7 +48,7 @@ var running := false
 var finished := false
 var obstacles: Array[Dictionary] = []
 var random := RandomNumberGenerator.new()
-var dragon_texture: Texture2D = DRAGON_TEXTURE
+var dragon_texture: Texture2D
 var last_gap_center := 0.0
 var obstacle_serial := 0
 var parallax_distance := 0.0
@@ -57,18 +57,24 @@ var cloud_near_offset := 0.0
 var landscape_offset := 0.0
 
 
+func configure(session: Dictionary) -> void:
+	super.configure(session)
+	var appearance: Dictionary = session.get("appearance", {})
+	dragon_texture = ProceduralDragonTextures.texture_for(int(appearance.get("seed", 34)), "flight")
+
+
 func _ready() -> void:
 	random.randomize()
 	clip_contents = true
-	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	dragon = TextureRect.new()
-	dragon.texture = dragon_texture if dragon_texture != null else DRAGON_TEXTURE
+	dragon.texture = dragon_texture if dragon_texture != null else ProceduralDragonTextures.texture_for(34, "flight")
 	dragon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	dragon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	dragon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	dragon.flip_h = true
+	dragon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	dragon.flip_h = false
 	dragon.position = Vector2(DRAGON_X, size.y * 0.45)
 	dragon.size = DRAGON_SIZE
 	dragon.pivot_offset = DRAGON_SIZE / 2.0
@@ -153,8 +159,8 @@ func _move_obstacles(delta: float) -> void:
 
 func _advance_background(delta: float) -> void:
 	parallax_distance += LANDSCAPE_SPEED * delta
-	cloud_far_offset = fmod(cloud_far_offset + CLOUD_FAR_SPEED * delta, 360.0)
-	cloud_near_offset = fmod(cloud_near_offset + CLOUD_NEAR_SPEED * delta, 520.0)
+	cloud_far_offset = fmod(cloud_far_offset + CLOUD_FAR_SPEED * delta, 1080.0)
+	cloud_near_offset = fmod(cloud_near_offset + CLOUD_NEAR_SPEED * delta, 1560.0)
 	landscape_offset = fmod(
 		landscape_offset + LANDSCAPE_SPEED * delta,
 		float(LANDSCAPE.get_width())
@@ -288,6 +294,7 @@ func _finish(completed: bool) -> void:
 		return
 	finished = true
 	running = false
+	complete_talent_run(score, {"completed": completed})
 	run_finished.emit.call_deferred(score, completed)
 
 
@@ -308,16 +315,8 @@ func _draw() -> void:
 
 
 func _draw_banded_sky() -> void:
-	var band_height := size.y / 5.0
-	var colors := [
-		Color("#4fb3d0"),
-		Color("#78d6ed"),
-		Color("#78d6ed"),
-		Color("#a8e6f5"),
-		Color("#dff3ef"),
-	]
-	for index in colors.size():
-		draw_rect(Rect2(0, band_height * index, size.x, band_height + 1.0), colors[index])
+	draw_texture_rect(SKY, Rect2(Vector2.ZERO, size), false)
+	_draw_tiled_layer(MOUNTAINS, size.y - 560.0, parallax_distance * 0.38)
 
 
 func _draw_cloud_track(
@@ -326,12 +325,13 @@ func _draw_cloud_track(
 	offset: float,
 	spacing: float
 ) -> void:
-	var shift := fposmod(-offset, spacing) - spacing
-	var count := ceili(size.x / spacing) + 3
-	for index in count:
-		var texture: Texture2D = textures[index % textures.size()]
-		var y_offset := float((index * 2 + 1) % 3) * 64.0
-		draw_texture(texture, Vector2(shift + index * spacing, base_y + y_offset))
+	var period := spacing * textures.size()
+	var shift := -fposmod(offset, period)
+	for cycle in range(-1, ceili(size.x / period) + 1):
+		for index in textures.size():
+			var texture: Texture2D = textures[index]
+			var y_offset := float((index * 2 + 1) % 3) * 64.0
+			draw_texture(texture, Vector2(shift + cycle * period + index * spacing, base_y + y_offset))
 
 
 func _draw_tiled_layer(texture: Texture2D, y: float, offset: float) -> void:

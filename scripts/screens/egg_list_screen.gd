@@ -22,7 +22,7 @@ func build() -> void:
 		22,
 		UiTokens.INK_SOFT,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	count.position = Vector2(0, 130 + top_shift)
 	count.size = Vector2(720, 34)
@@ -56,14 +56,6 @@ func _build_empty(top_shift: float) -> void:
 	hint.size = Vector2(510, 75)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	empty_panel.add_child(hint)
-	var shop := WidgetFactory.button(
-		tr_text("NAV_SHOP"),
-		Rect2(80, 620 + top_shift, 560, 110),
-		Color("#8ed5aa"),
-		Color("#4d9a70")
-	)
-	shop.pressed.connect(navigate.bind("shop", {}))
-	add_child(shop)
 
 
 func _build_list(top_shift: float) -> void:
@@ -122,7 +114,7 @@ func _build_list(top_shift: float) -> void:
 			22,
 			UiTokens.INK_SOFT,
 			HORIZONTAL_ALIGNMENT_LEFT,
-			UiTokens.FONT_BOLD
+			UiTokens.FONT_NUMERIC
 		)
 		progress_text.position = Vector2(180, 88)
 		progress_text.size = Vector2(405, 76)
@@ -138,7 +130,7 @@ func _add_egg_art(parent: Control, egg: Dictionary, rect: Rect2) -> void:
 			rect,
 			TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		)
-		egg_art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		egg_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		parent.add_child(egg_art)
 		return
 	var sunwing_egg := PIXEL_ART.PixelEgg.new()
@@ -147,22 +139,5 @@ func _add_egg_art(parent: Control, egg: Dictionary, rect: Rect2) -> void:
 	parent.add_child(sunwing_egg)
 
 
-func _egg_accent_color(egg: Dictionary) -> Color:
-	var definition := GameState.egg_definition(egg)
-	if definition != null:
-		if definition.has_type(&"fire") and definition.has_type(&"earth"):
-			return Color("#d9571f")
-		if definition.has_type(&"earth") and definition.has_type(&"water"):
-			return Color("#607d69")
-	match GameState.egg_kind(egg):
-		"fusion":
-			return Color("#824ca0")
-		"fire":
-			return Color("#d8492f")
-		"water":
-			return Color("#168ec8")
-		"earth":
-			return Color("#8b633d")
-		"ice":
-			return Color("#3187b8")
-	return UiTokens.PINK_DARK
+func _egg_accent_color(_egg: Dictionary) -> Color:
+	return UiTokens.GOLD_DARK

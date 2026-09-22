@@ -18,12 +18,8 @@ const GOLD := Color("#e9aa46")
 const GOLD_DARK := Color("#ad6f31")
 const LILAC := Color("#9a78b3")
 
-## Nunito's rounded shapes echo the hand-painted sprites while keeping small
-## German labels and digits easy to scan. The variation resources keep one
-## bundled font file for every platform while still providing real weights.
+## Rounded, bundled lettering keeps every language consistent with the comic art.
 const FONT_REGULAR := preload("res://assets/fonts/Nunito-Regular.tres")
 const FONT_BOLD := preload("res://assets/fonts/Nunito-Bold.tres")
 const FONT_HEAVY := preload("res://assets/fonts/Nunito-Heavy.tres")
-
-## Keep seed counters unambiguous at small sizes.
-const FONT_NUMERIC := preload("res://assets/fonts/Nunito-Bold.tres")
+const FONT_NUMERIC := FONT_BOLD

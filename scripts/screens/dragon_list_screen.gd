@@ -1,7 +1,6 @@
 extends GameScreen
 
 const PIXEL_ART := preload("res://scripts/ui/pixel_art.gd")
-const DRAGON_TEXTURE := preload("res://assets/art/dragon_pink_hd.png")
 
 
 func build() -> void:
@@ -26,7 +25,7 @@ func build() -> void:
 		22,
 		UiTokens.INK_SOFT,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	count.position = Vector2(0, 130 + top_shift)
 	count.size = Vector2(720, 34)
@@ -62,9 +61,7 @@ func build() -> void:
 	for index in dragon_count:
 		var dragon_data: Dictionary = GameState.dragons[index]
 		var dragon_texture := GameState.dragon_texture(dragon_data)
-		if dragon_texture == null:
-			dragon_texture = DRAGON_TEXTURE
-		var uses_pixel_filter := not GameState.dragon_has_type(dragon_data, &"sunwing")
+
 		var accent := _dragon_accent_color(dragon_data)
 		var column := index % 2
 		var row := index / 2
@@ -110,9 +107,7 @@ func build() -> void:
 		var portrait := WidgetFactory.dragon_presentation(
 			dragon_texture,
 			Rect2(20, 5, portrait_back.size.x - 40.0, 230),
-			CanvasItem.TEXTURE_FILTER_NEAREST
-			if uses_pixel_filter
-			else CanvasItem.TEXTURE_FILTER_LINEAR
+			CanvasItem.TEXTURE_FILTER_LINEAR
 		)
 		portrait_back.add_child(portrait)
 		var dragon_name := WidgetFactory.label(

@@ -3,31 +3,34 @@ extends RefCounted
 
 const PIXEL_ART := preload("res://scripts/ui/pixel_art.gd")
 const DRAGON_PRESENTATION := preload("res://scripts/ui/dragon_presentation.gd")
+const SETTINGS_GEAR_TEXTURE := preload("res://assets/art/comic/ui_redesign/icons/settings_gear.png")
 const BUTTON_TEXTURE_MARGIN := 30.0
+const BUTTON_IDLE_SHADOW_SIZE := 9.0
+const PANEL_TEXTURE_MARGIN := 18.0
 const BUTTON_TEXTURES := {
 	"pink": {
-		"idle": preload("res://assets/art/ui_redesign/buttons/pink_idle.png"),
-		"pressed": preload("res://assets/art/ui_redesign/buttons/pink_pressed.png"),
+		"idle": preload("res://assets/art/comic/ui_redesign/buttons/pink_idle.png"),
+		"pressed": preload("res://assets/art/comic/ui_redesign/buttons/pink_pressed.png"),
 	},
 	"green": {
-		"idle": preload("res://assets/art/ui_redesign/buttons/green_idle.png"),
-		"pressed": preload("res://assets/art/ui_redesign/buttons/green_pressed.png"),
+		"idle": preload("res://assets/art/comic/ui_redesign/buttons/green_idle.png"),
+		"pressed": preload("res://assets/art/comic/ui_redesign/buttons/green_pressed.png"),
 	},
 	"gold": {
-		"idle": preload("res://assets/art/ui_redesign/buttons/gold_idle.png"),
-		"pressed": preload("res://assets/art/ui_redesign/buttons/gold_pressed.png"),
+		"idle": preload("res://assets/art/comic/ui_redesign/buttons/gold_idle.png"),
+		"pressed": preload("res://assets/art/comic/ui_redesign/buttons/gold_pressed.png"),
 	},
 	"cream": {
-		"idle": preload("res://assets/art/ui_redesign/buttons/cream_idle.png"),
-		"pressed": preload("res://assets/art/ui_redesign/buttons/cream_pressed.png"),
+		"idle": preload("res://assets/art/comic/ui_redesign/buttons/cream_idle.png"),
+		"pressed": preload("res://assets/art/comic/ui_redesign/buttons/cream_pressed.png"),
 	},
 	"lilac": {
-		"idle": preload("res://assets/art/ui_redesign/buttons/lilac_idle.png"),
-		"pressed": preload("res://assets/art/ui_redesign/buttons/lilac_pressed.png"),
+		"idle": preload("res://assets/art/comic/ui_redesign/buttons/lilac_idle.png"),
+		"pressed": preload("res://assets/art/comic/ui_redesign/buttons/lilac_pressed.png"),
 	},
 	"sky": {
-		"idle": preload("res://assets/art/ui_redesign/buttons/sky_idle.png"),
-		"pressed": preload("res://assets/art/ui_redesign/buttons/sky_pressed.png"),
+		"idle": preload("res://assets/art/comic/ui_redesign/buttons/sky_idle.png"),
+		"pressed": preload("res://assets/art/comic/ui_redesign/buttons/sky_pressed.png"),
 	},
 }
 const BUTTON_VARIANT_COLORS := {
@@ -37,6 +40,43 @@ const BUTTON_VARIANT_COLORS := {
 	"cream": Color("#f3d9ae"),
 	"lilac": Color("#9a78b3"),
 	"sky": Color("#78d6ed"),
+}
+const PANEL_TEXTURES := {
+	"cream": {
+		"raised": preload("res://assets/art/comic/ui_redesign/panels/cream_raised.png"),
+		"flat": preload("res://assets/art/comic/ui_redesign/panels/cream_flat.png"),
+	},
+	"cream_pink": {
+		"raised": preload("res://assets/art/comic/ui_redesign/panels/cream_pink_raised.png"),
+		"flat": preload("res://assets/art/comic/ui_redesign/panels/cream_pink_flat.png"),
+	},
+	"dark": {
+		"raised": preload("res://assets/art/comic/ui_redesign/panels/dark_raised.png"),
+		"flat": preload("res://assets/art/comic/ui_redesign/panels/dark_flat.png"),
+	},
+	"sky": {
+		"raised": preload("res://assets/art/comic/ui_redesign/panels/sky_raised.png"),
+		"flat": preload("res://assets/art/comic/ui_redesign/panels/sky_flat.png"),
+	},
+	"green": {
+		"raised": preload("res://assets/art/comic/ui_redesign/panels/green_raised.png"),
+		"flat": preload("res://assets/art/comic/ui_redesign/panels/green_flat.png"),
+	},
+	"gold": {
+		"raised": preload("res://assets/art/comic/ui_redesign/panels/gold_raised.png"),
+		"flat": preload("res://assets/art/comic/ui_redesign/panels/gold_flat.png"),
+	},
+	"lilac": {
+		"raised": preload("res://assets/art/comic/ui_redesign/panels/lilac_raised.png"),
+		"flat": preload("res://assets/art/comic/ui_redesign/panels/lilac_flat.png"),
+	},
+}
+const PANEL_VARIANT_COLORS := {
+	"cream": Color("#fff1d2"),
+	"sky": Color("#a8e6f5"),
+	"green": Color("#a9d69a"),
+	"gold": Color("#f5c877"),
+	"lilac": Color("#9a78b3"),
 }
 
 
@@ -58,7 +98,7 @@ static func texture_rect(
 
 static func pixel_icon(texture: Texture2D, rect: Rect2) -> TextureRect:
 	var result := texture_rect(texture, rect, TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
-	result.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	result.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	result.pivot_offset = rect.size / 2.0
 	return result
 
@@ -99,13 +139,29 @@ static func panel_style(
 	radius: int,
 	shadow_size: int = 0,
 	shadow_color := Color(0.16, 0.10, 0.20, 0.35)
+) -> StyleBox:
+	# Compact bars use rounded geometry; cards share the illustrated panel family.
+	if radius > 8:
+		return _panel_texture_style(
+			_panel_variant(color, border),
+			shadow_size >= 6
+		)
+	return _flat_panel_style(color, border, radius, shadow_size, shadow_color)
+
+
+static func _flat_panel_style(
+	color: Color,
+	border: Color,
+	radius: int,
+	shadow_size: int,
+	shadow_color: Color
 ) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = color
 	style.border_color = border
 	style.set_border_width_all(3)
 	style.set_corner_radius_all(radius)
-	style.corner_detail = 3
+	style.corner_detail = 12
 	style.shadow_color = shadow_color
 	style.shadow_size = shadow_size
 	style.shadow_offset = Vector2(0, shadow_size)
@@ -116,6 +172,48 @@ static func panel_style(
 	return style
 
 
+static func _panel_texture_style(variant: String, raised: bool) -> StyleBoxTexture:
+	var style := StyleBoxTexture.new()
+	style.texture = PANEL_TEXTURES[variant]["raised" if raised else "flat"]
+	style.texture_margin_left = PANEL_TEXTURE_MARGIN
+	style.texture_margin_top = PANEL_TEXTURE_MARGIN
+	style.texture_margin_right = PANEL_TEXTURE_MARGIN
+	style.texture_margin_bottom = PANEL_TEXTURE_MARGIN
+	style.content_margin_left = 16.0
+	style.content_margin_right = 16.0
+	style.content_margin_top = 10.0
+	style.content_margin_bottom = 10.0
+	style.set_meta("ui_panel_variant", variant)
+	style.set_meta("ui_panel_raised", raised)
+	return style
+
+
+static func _panel_variant(color: Color, border: Color) -> String:
+	if color.get_luminance() < 0.34:
+		return "dark"
+	if _color_distance(border, UiTokens.PINK_DARK) < 0.01:
+		return "cream_pink"
+	var closest_variant := "cream"
+	var closest_distance := INF
+	for variant in PANEL_VARIANT_COLORS:
+		var distance := _color_distance(color, PANEL_VARIANT_COLORS[variant])
+		if distance < closest_distance:
+			closest_distance = distance
+			closest_variant = variant
+	return closest_variant
+
+
+static func _color_distance(first: Color, second: Color) -> float:
+	var red_delta := first.r - second.r
+	var green_delta := first.g - second.g
+	var blue_delta := first.b - second.b
+	return (
+		red_delta * red_delta * 0.2126
+		+ green_delta * green_delta * 0.7152
+		+ blue_delta * blue_delta * 0.0722
+	)
+
+
 static func button(text_value: String, rect: Rect2, color: Color, shadow_color: Color) -> Button:
 	var result := Button.new()
 	var variant := _closest_button_variant(color)
@@ -123,7 +221,7 @@ static func button(text_value: String, rect: Rect2, color: Color, shadow_color: 
 	result.text = text_value
 	result.position = rect.position
 	result.size = rect.size
-	result.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	result.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	result.focus_mode = Control.FOCUS_NONE
 	result.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	result.add_theme_font_override("font", UiTokens.FONT_BOLD)
@@ -150,7 +248,7 @@ static func small_button(text_value: String, rect: Rect2, color: Color) -> Butto
 	result.text = "" if is_back_button or is_settings_button else text_value
 	result.position = rect.position
 	result.size = rect.size
-	result.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	result.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	result.focus_mode = Control.FOCUS_NONE
 	result.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	result.add_theme_font_override("font", UiTokens.FONT_BOLD)
@@ -161,16 +259,24 @@ static func small_button(text_value: String, rect: Rect2, color: Color) -> Butto
 	result.add_theme_stylebox_override("normal", _button_texture_style(variant, false))
 	result.add_theme_stylebox_override("hover", _button_texture_style(variant, false))
 	result.add_theme_stylebox_override("pressed", _button_texture_style(variant, true))
+	result.add_theme_stylebox_override("disabled", _button_texture_style(variant, true))
+	var icon_face_size := rect.size - Vector2(0, BUTTON_IDLE_SHADOW_SIZE)
 	if is_back_button:
 		var chevron := PIXEL_ART.PixelChevron.new()
 		chevron.name = "PixelChevron"
-		chevron.size = rect.size
+		chevron.size = icon_face_size
 		result.add_child(chevron)
 		result.set_meta("ui_small_button_kind", "back")
 	elif is_settings_button:
-		var gear := PIXEL_ART.PixelGear.new()
+		var gear := TextureRect.new()
 		gear.name = "PixelGear"
-		gear.size = rect.size
+		gear.texture = SETTINGS_GEAR_TEXTURE
+		gear.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		gear.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		gear.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		gear.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		gear.size = Vector2(48, 48)
+		gear.position = ((icon_face_size - gear.size) * 0.5).floor()
 		result.add_child(gear)
 		result.set_meta("ui_small_button_kind", "settings")
 	return result
@@ -219,7 +325,13 @@ static func badge(text_value: String, rect: Rect2, color: Color, text_color: Col
 	result.size = rect.size
 	result.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	result.add_theme_stylebox_override("panel", panel_style(color, UiTokens.INK, 9, 2))
-	var text_label := label(text_value, 19, text_color, HORIZONTAL_ALIGNMENT_CENTER, UiTokens.FONT_BOLD)
+	var text_label := label(
+		text_value,
+		19,
+		text_color,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		UiTokens.FONT_NUMERIC
+	)
 	text_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 5)
 	result.add_child(text_label)
 	return result
@@ -290,7 +402,13 @@ static func add_resource_pill(
 	icon.position = Vector2(18, 14)
 	icon.size = Vector2(38, 40)
 	pill.add_child(icon)
-	var pill_text := label(str(amount), 28, accent, HORIZONTAL_ALIGNMENT_CENTER, UiTokens.FONT_BOLD)
+	var pill_text := label(
+		str(amount),
+		28,
+		accent,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		UiTokens.FONT_NUMERIC
+	)
 	pill_text.position = Vector2(57, 0)
 	pill_text.size = Vector2(102, 68)
 	pill.add_child(pill_text)

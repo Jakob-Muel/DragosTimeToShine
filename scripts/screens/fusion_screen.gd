@@ -6,6 +6,8 @@ const FUSION_STONE := preload("res://scripts/ui/fusion_stone.gd")
 const LETTER_TRACE_PAD := preload("res://scripts/ui/letter_trace_pad.gd")
 const LETTERS := ["F", "U", "S", "I", "O", "N"]
 
+var inheritance: Dictionary = {}
+
 var first_parent_id := ""
 var second_parent_id := ""
 var letter_index := 0
@@ -97,7 +99,7 @@ func _build_selection() -> void:
 		Color("#9a68bd"),
 		Color("#67447f")
 	)
-	start_button.pressed.connect(_begin_trace)
+	start_button.pressed.connect(_build_inheritance)
 	add_child(start_button)
 
 	var collection_title := WidgetFactory.label(
@@ -155,7 +157,7 @@ func _add_dragon_card(parent: Control, dragon: Dictionary, index: int) -> void:
 			Rect2(25, 12, 255, 185),
 			CanvasItem.TEXTURE_FILTER_LINEAR
 			if GameState.dragon_has_type(dragon, &"sunwing")
-			else CanvasItem.TEXTURE_FILTER_NEAREST
+			else CanvasItem.TEXTURE_FILTER_LINEAR
 		)
 		card.add_child(portrait)
 	var dragon_name := WidgetFactory.label(
@@ -242,7 +244,7 @@ func _refresh_stone(stone: Control, dragon_id: String) -> void:
 			Rect2(36, 0, 218, 190),
 			CanvasItem.TEXTURE_FILTER_LINEAR
 			if GameState.dragon_has_type(dragon, &"sunwing")
-			else CanvasItem.TEXTURE_FILTER_NEAREST
+			else CanvasItem.TEXTURE_FILTER_LINEAR
 		)
 		stone.add_child(portrait)
 	var name := WidgetFactory.label(
@@ -286,6 +288,44 @@ func _error_text_key(error: StringName) -> String:
 		&"not_enough_stars":
 			return "FUSION_NEED_STAR"
 	return "FUSION_READY"
+
+
+func _build_inheritance() -> void:
+	if not GameState.can_fuse(first_parent_id, second_parent_id):
+		return
+	_clear_content()
+	var shift := _add_background()
+	_add_header(_build_selection, shift)
+	inheritance.clear()
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(40, 195 + shift)
+	scroll.size = Vector2(640, safe_bottom_y() - 195 - shift)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll)
+	var content := VBoxContainer.new()
+	content.custom_minimum_size.x = 620
+	content.add_theme_constant_override("separation", 18)
+	scroll.add_child(content)
+	var hint := WidgetFactory.label(tr_text("INHERITANCE_HINT"), 24, UiTokens.INK)
+	hint.custom_minimum_size = Vector2(620, 115)
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(hint)
+	for attribute: String in GameState.ATTRIBUTES.IDS:
+		content.add_child(WidgetFactory.label(tr_text("ATTR_" + attribute.to_upper()), 28, UiTokens.INK))
+		var choices := OptionButton.new()
+		choices.custom_minimum_size = Vector2(620, 72)
+		choices.add_theme_font_size_override("font_size", 24)
+		for parent_id: String in [first_parent_id, second_parent_id]:
+			var parent := GameState.get_dragon(parent_id)
+			var side := "A" if parent_id == first_parent_id else "B"
+			choices.add_item("%s · %s · %s: %d" % [side, tr_text(GameState.dragon_name_key(parent)), tr_text("POTENTIAL"), int(parent["attributes"][attribute]["potential"])])
+		inheritance[attribute] = first_parent_id
+		choices.item_selected.connect(func(index: int): inheritance[attribute] = first_parent_id if index == 0 else second_parent_id)
+		content.add_child(choices)
+	var confirm := WidgetFactory.button(tr_text("INHERITANCE_CONFIRM"), Rect2(0, 0, 620, 100), UiTokens.PINK, UiTokens.PINK_DARK)
+	confirm.custom_minimum_size = Vector2(620, 100)
+	confirm.pressed.connect(_begin_trace)
+	content.add_child(confirm)
 
 
 func _begin_trace() -> void:
@@ -366,7 +406,7 @@ func _on_letter_completed(_letter: String) -> void:
 
 
 func _complete_fusion() -> void:
-	result_egg_id = GameState.fuse_dragons(first_parent_id, second_parent_id)
+	result_egg_id = GameState.fuse_dragons(first_parent_id, second_parent_id, inheritance)
 	if result_egg_id.is_empty():
 		_build_selection()
 		return
@@ -412,7 +452,7 @@ func _build_reveal() -> void:
 			Rect2(96, 195, 440, 600),
 			TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		)
-		portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		burst.add_child(portrait)
 	var result_name := tr_text(GameState.egg_name_key(result))
 	var created := WidgetFactory.label(

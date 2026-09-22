@@ -1,9 +1,7 @@
 extends GameScreen
 
 const PIXEL_ART := preload("res://scripts/ui/pixel_art.gd")
-const DRAGON_TEXTURE := preload("res://assets/art/dragon_pink_hd.png")
-const ICE_DRAGON_TEXTURE := preload("res://assets/art/ice/ice_dragon_alpha.png")
-const GROOMING_COMB_TEXTURE := preload("res://assets/art/ui_redesign/icons/grooming_comb.png")
+const GROOMING_COMB_TEXTURE := preload("res://assets/art/comic/ui_redesign/icons/grooming_comb.png")
 const GROOM_CLEAN_PER_PIXEL := 0.008
 
 const PINK := UiTokens.PINK
@@ -18,7 +16,7 @@ const SKY := UiTokens.SKY
 const FONT_BOLD := UiTokens.FONT_BOLD
 
 var selected_dragon_id := "luma"
-var active_dragon_texture: Texture2D = DRAGON_TEXTURE
+var active_dragon_texture: Texture2D
 var groom_area: Control
 var groom_sprite: TextureRect
 var groom_comb: Control
@@ -64,10 +62,7 @@ func selected_dragon_name() -> String:
 
 
 func dragon_texture_for(dragon_data: Dictionary) -> Texture2D:
-	var texture := GameState.dragon_texture(dragon_data)
-	if texture != null:
-		return texture
-	return ICE_DRAGON_TEXTURE if GameState.dragon_has_type(dragon_data, &"ice") else DRAGON_TEXTURE
+	return GameState.dragon_texture(dragon_data)
 
 
 func _go_habitat() -> void:
@@ -78,10 +73,11 @@ func build() -> void:
 	random.randomize()
 	var top_shift := safe_top_y(32.0) - 32.0
 	var dragon_data := selected_dragon_data()
-	var uses_pixel_filter := not GameState.dragon_has_type(dragon_data, &"sunwing")
 	var accent := _dragon_accent_color(dragon_data)
 	active_dragon_texture = dragon_texture_for(dragon_data)
 	dragon_alpha_image = active_dragon_texture.get_image()
+	if not active_dragon_texture.changed.is_connected(_refresh_dragon_mask):
+		active_dragon_texture.changed.connect(_refresh_dragon_mask)
 	var height_mix := clampf((canvas_size.y - 1280.0) / (GameCanvas.BASE_DESIGN_HEIGHT - 1280.0), 0.0, 1.0)
 	var portrait_height := lerpf(560.0, 738.0, height_mix)
 	var sprite_height := portrait_height - 88.0
@@ -126,7 +122,13 @@ func build() -> void:
 	clean_title.position = Vector2(22, 14)
 	clean_title.size = Vector2(180, 34)
 	progress_panel.add_child(clean_title)
-	clean_label = WidgetFactory.label("%d%%" % floori(cleanliness), 25, accent, HORIZONTAL_ALIGNMENT_RIGHT, FONT_BOLD)
+	clean_label = WidgetFactory.label(
+		"%d%%" % floori(cleanliness),
+		25,
+		accent,
+		HORIZONTAL_ALIGNMENT_RIGHT,
+		UiTokens.FONT_NUMERIC
+	)
 	clean_label.position = Vector2(490, 14)
 	clean_label.size = Vector2(120, 34)
 	progress_panel.add_child(clean_label)
@@ -166,7 +168,7 @@ func build() -> void:
 	add_child(portrait_panel)
 
 	groom_sprite = WidgetFactory.texture_rect(active_dragon_texture, Rect2(90, 420 + top_shift, 540, sprite_height), TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
-	groom_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if uses_pixel_filter else CanvasItem.TEXTURE_FILTER_LINEAR
+	groom_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	groom_sprite.pivot_offset = groom_sprite.size / 2.0
 	groom_sprite.z_index = 20
 	add_child(groom_sprite)
@@ -415,3 +417,7 @@ func _burst_confetti(parent: Control, origin: Vector2, piece_count: int, layer: 
 		piece.piece_color = colors[piece_index % colors.size()]
 		piece.z_index = layer
 		parent.add_child(piece)
+
+
+func _refresh_dragon_mask() -> void:
+	dragon_alpha_image = active_dragon_texture.get_image()

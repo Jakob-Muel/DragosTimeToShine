@@ -73,12 +73,3 @@ func build() -> void:
 		tr_text("DEN_FUSION_CAPTION", {"count": GameState.fusion_stars})
 	)
 
-	var shop_button := WidgetFactory.button(
-		tr_text("NAV_SHOP"),
-		Rect2(120, 720 + top_shift, 480, 106),
-		Color("#8ed5aa"),
-		Color("#4d9a70")
-	)
-	shop_button.pressed.connect(navigate.bind("shop", {}))
-	add_child(shop_button)
-	WidgetFactory.add_button_caption(shop_button, tr_text("SHOP_CAPTION"))

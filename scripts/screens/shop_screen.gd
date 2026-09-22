@@ -1,9 +1,7 @@
 extends GameScreen
 
 const PIXEL_ART := preload("res://scripts/ui/pixel_art.gd")
-const FIRE_EGG_TEXTURE := preload("res://assets/art/fire/fire_egg.png")
-const WATER_EGG_TEXTURE := preload("res://assets/art/water/water_egg.png")
-const EARTH_EGG_TEXTURE := preload("res://assets/art/earth/earth_egg.png")
+const EGG_TEXTURE := preload("res://assets/art/comic/sun_egg.png")
 
 const CARD_HEIGHT := 268.0
 const CARD_GAP := 22.0
@@ -26,37 +24,14 @@ func build() -> void:
 	add_child(scroll)
 
 	var show_hint := GameState.gold < GameState.EGG_PRICE_GOLD
-	var content_height := 3.0 * CARD_HEIGHT + 4.0 * CARD_GAP
+	var content_height := CARD_HEIGHT + 2.0 * CARD_GAP
 	if show_hint:
 		content_height += 92.0
 	var content := Control.new()
 	content.custom_minimum_size = Vector2(720, content_height)
 	scroll.add_child(content)
 
-	_add_egg_card(
-		content,
-		&"fire",
-		FIRE_EGG_TEXTURE,
-		"FIRE_EGG_NAME",
-		Color("#d45b3f"),
-		CARD_GAP
-	)
-	_add_egg_card(
-		content,
-		&"water",
-		WATER_EGG_TEXTURE,
-		"WATER_EGG_NAME",
-		Color("#318eb7"),
-		CARD_GAP + CARD_HEIGHT + CARD_GAP
-	)
-	_add_egg_card(
-		content,
-		&"earth",
-		EARTH_EGG_TEXTURE,
-		"EARTH_EGG_NAME",
-		Color("#826143"),
-		CARD_GAP + 2.0 * (CARD_HEIGHT + CARD_GAP)
-	)
+	_add_egg_card(content, &"random", EGG_TEXTURE, "RANDOM_EGG_NAME", UiTokens.GOLD_DARK, CARD_GAP)
 
 	if show_hint:
 		var locked_hint := WidgetFactory.label(
@@ -148,7 +123,7 @@ func _add_egg_card(
 		Rect2(26, 10, 158, 210),
 		TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	)
-	egg.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	egg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	egg_back.add_child(egg)
 
 	var item_name := WidgetFactory.label(
@@ -168,7 +143,7 @@ func _add_egg_card(
 		23,
 		UiTokens.GOLD_DARK,
 		HORIZONTAL_ALIGNMENT_LEFT,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	price.position = Vector2(258, 77)
 	price.size = Vector2(326, 40)
@@ -176,7 +151,7 @@ func _add_egg_card(
 
 	var available := GameState.is_shop_egg_available(String(kind))
 	var buy := WidgetFactory.button(
-		tr_text("BUY_EGG") if available else tr_text("EGG_ALREADY_OWNED"),
+		tr_text("BUY_EGG") if available else tr_text("EGG_POOL_COMPLETE"),
 		Rect2(252, 148, 338, 82),
 		accent,
 		accent.darkened(0.30)

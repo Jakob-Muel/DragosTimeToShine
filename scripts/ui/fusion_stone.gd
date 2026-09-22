@@ -25,13 +25,10 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 
 func _draw() -> void:
 	var center := Vector2(size.x * 0.5, size.y * 0.72)
-	var outer := PackedVector2Array()
-	var inner := PackedVector2Array()
-	for index in 12:
-		var angle := TAU * float(index) / 12.0
-		var wobble := 1.0 if index % 2 == 0 else 0.9
-		outer.append(center + Vector2(cos(angle) * size.x * 0.43 * wobble, sin(angle) * size.y * 0.20))
-		inner.append(center + Vector2(cos(angle) * size.x * 0.37 * wobble, sin(angle) * size.y * 0.14))
-	draw_colored_polygon(outer, Color("#2f2140"))
-	draw_colored_polygon(inner, Color("#7d6a78") if not occupied else Color("#ffc857"))
-	draw_arc(center, size.x * 0.25, 0.0, TAU, 24, Color("#fff1c9"), 5.0)
+	draw_set_transform(center, 0, Vector2(1, 0.38))
+	draw_circle(Vector2(0, 15), size.x * 0.43, UiTokens.INK, true, -1, true)
+	draw_circle(Vector2.ZERO, size.x * 0.42, UiTokens.INK, true, -1, true)
+	draw_circle(Vector2.ZERO, size.x * 0.39, Color("#a99ab6") if not occupied else UiTokens.GOLD, true, -1, true)
+	draw_arc(Vector2.ZERO, size.x * 0.34, PI, TAU, 64, Color("#e5d8e3"), 5, true)
+	draw_arc(Vector2.ZERO, size.x * 0.26, 0, TAU, 64, UiTokens.CREAM, 3, true)
+	draw_set_transform(Vector2.ZERO)

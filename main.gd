@@ -1,5 +1,6 @@
 extends Control
 
+const ATTRIBUTES_SCREEN := preload("res://scenes/screens/attributes_screen.tscn")
 const FLIGHT_GAME := preload("res://scripts/ui/flight_game.gd")
 const MAIN_MENU_SCREEN := preload("res://scenes/screens/main_menu_screen.tscn")
 const DEN_SCREEN := preload("res://scenes/screens/den_screen.tscn")
@@ -11,8 +12,10 @@ const SETTINGS_SCREEN := preload("res://scenes/screens/settings_screen.tscn")
 const FUSION_SCREEN := preload("res://scenes/screens/fusion_screen.tscn")
 const FLIGHT_DRAGON_SELECT_SCREEN := preload("res://scenes/screens/flight_dragon_select_screen.tscn")
 const FLIGHT_HUB_SCREEN := preload("res://scenes/screens/flight_hub_screen.tscn")
+const TRAINING_SESSION_SCREEN := preload("res://scenes/screens/training_session_screen.tscn")
 const FLIGHT_TRAINING_SCREEN := preload("res://scenes/screens/flight_training_screen.tscn")
 const FLIGHT_CONTEST_SCREEN := preload("res://scenes/screens/flight_contest_screen.tscn")
+const FLAME_SHOOTER_SCREEN := preload("res://scenes/screens/flame_shooter_screen.tscn")
 const DRAGON_LAB_SCREEN := preload("res://scenes/screens/dragon_lab_screen.tscn")
 const HABITAT_SCREEN := preload("res://scenes/screens/habitat_screen.tscn")
 const GROOM_SCREEN := preload("res://scenes/screens/groom_screen.tscn")
@@ -28,6 +31,7 @@ var layout_rebuild_queued := false
 var current_screen := "main"
 var current_egg_id := ""
 var selected_dragon_id := "luma"
+var training_context: Dictionary = {}
 var hunger: int:
 	get:
 		return GameState.get_dragon_hunger(selected_dragon_id)
@@ -128,9 +132,12 @@ func _on_screen_navigation(route: String, params: Dictionary) -> void:
 		"reset_app":
 			_reset_app()
 		"purchase_egg":
-			_purchase_egg(String(params.get("kind", "fire")))
+			_purchase_egg(String(params.get("kind", "random")))
 		"select_dragon":
 			_select_dragon(String(params.get("dragon_id", "luma")))
+		"attributes":
+			selected_dragon_id = String(params.get("selected_dragon_id", selected_dragon_id))
+			_show_attributes()
 		"habitat":
 			selected_dragon_id = String(params.get("selected_dragon_id", selected_dragon_id))
 			_show_habitat()
@@ -144,12 +151,16 @@ func _on_screen_navigation(route: String, params: Dictionary) -> void:
 		"select_flight_dragon":
 			selected_dragon_id = String(params.get("dragon_id", "luma"))
 			_show_flight_hub()
+		"training_session":
+			_show_training_session(params)
 		"flight_training":
 			_show_flight_training()
-		"dragon_lab":
-			_show_dragon_lab()
 		"flight_contest":
 			_show_flight_contest()
+		"flame_shooter":
+			_show_flame_shooter()
+		"dragon_lab":
+			_show_dragon_lab()
 		_:
 			push_warning("Unknown screen route: %s" % route)
 
@@ -163,6 +174,9 @@ func _call_active_screen(method: StringName, args: Array = []) -> Variant:
 
 
 func _show_main_menu() -> void:
+	if not GameState.starter_egg_id().is_empty():
+		_show_egg_detail(GameState.starter_egg_id(), false)
+		return
 	_show_routed_screen("main", MAIN_MENU_SCREEN)
 
 func _show_den() -> void:
@@ -218,10 +232,14 @@ func _reset_app() -> void:
 	_show_main_menu()
 
 
-func _purchase_egg(kind: String = "fire") -> void:
+func _purchase_egg(kind: String = "random") -> void:
 	var egg_id := GameState.purchase_egg(kind)
 	if not egg_id.is_empty():
 		_show_egg_detail(egg_id, false)
+
+
+func _show_attributes() -> void:
+	_show_routed_screen("attributes", ATTRIBUTES_SCREEN, {"selected_dragon_id": selected_dragon_id})
 
 
 func _show_habitat() -> void:
@@ -253,6 +271,13 @@ func _show_flight_hub() -> void:
 		{"selected_dragon_id": selected_dragon_id}
 	)
 
+func _show_training_session(params: Dictionary) -> void:
+	training_context = params.duplicate(true)
+	selected_dragon_id = String(params.get("dragon_id", selected_dragon_id))
+	training_context["dragon_id"] = selected_dragon_id
+	_show_routed_screen("training_session", TRAINING_SESSION_SCREEN, training_context)
+
+
 func _show_flight_training() -> void:
 	_show_routed_screen(
 		"flight_training",
@@ -260,9 +285,17 @@ func _show_flight_training() -> void:
 		{"selected_dragon_id": selected_dragon_id}
 	)
 
+
+func _show_flame_shooter() -> void:
+	_show_routed_screen(
+		"flame_shooter",
+		FLAME_SHOOTER_SCREEN,
+		{"selected_dragon_id": selected_dragon_id}
+	)
+
+
 func _show_dragon_lab() -> void:
 	_show_routed_screen("dragon_lab", DRAGON_LAB_SCREEN)
-
 
 func _on_flight_score_changed(_score: int) -> void:
 	# Compatibility entry point for deterministic smoke tests.
@@ -302,6 +335,8 @@ func _rebuild_current_screen() -> void:
 			_show_settings()
 		"fusion":
 			_show_fusion()
+		"attributes":
+			_show_attributes()
 		"habitat":
 			_show_habitat()
 		"groom":
@@ -310,12 +345,16 @@ func _rebuild_current_screen() -> void:
 			_show_flight_hub()
 		"flight_select":
 			_show_flight_select()
+		"training_session":
+			_show_training_session(training_context)
 		"flight_training":
 			_show_flight_training()
-		"dragon_lab":
-			_show_dragon_lab()
 		"flight_contest":
 			_show_flight_contest()
+		"flame_shooter":
+			_show_flame_shooter()
+		"dragon_lab":
+			_show_dragon_lab()
 		_:
 			_show_main_menu()
 
@@ -446,18 +485,9 @@ func debug_show_screen(screen_name: String) -> void:
 		"mud_island":
 			selected_dragon_id = debug_add_mud_dragon()
 			_show_habitat()
-		"ice_egg":
-			var debug_egg_id := GameState._append_egg(&"frost")
-			_show_egg_detail(debug_egg_id, false)
-		"fire_egg":
+		"egg":
 			GameState.gold = 1
-			_purchase_egg("fire")
-		"water_egg":
-			GameState.gold = 1
-			_purchase_egg("water")
-		"earth_egg":
-			GameState.gold = 1
-			_purchase_egg("earth")
+			_purchase_egg()
 		"dragons_ice":
 			debug_add_ice_dragon()
 			_show_dragons()
@@ -485,6 +515,8 @@ func debug_show_screen(screen_name: String) -> void:
 		"earth_island":
 			selected_dragon_id = debug_add_earth_dragon()
 			_show_habitat()
+		"attributes":
+			_show_attributes()
 		"habitat":
 			_show_habitat()
 		"groom":
@@ -522,6 +554,12 @@ func debug_show_screen(screen_name: String) -> void:
 				if child.get_script() == FLIGHT_GAME:
 					child.call("debug_show_obstacle")
 					break
+		"flame_shooter":
+			_show_flame_shooter()
+			var shooter := _call_active_screen("debug_game") as FlameShooterGame
+			if shooter != null:
+				shooter.debug_spawn_knight(92.0)
+				shooter.debug_spawn_knight(522.0)
 		"dragon_lab":
 			_show_dragon_lab()
 		"flight_contest":

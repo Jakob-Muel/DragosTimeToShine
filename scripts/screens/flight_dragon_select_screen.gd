@@ -91,7 +91,7 @@ func _add_dragon_card(parent: Control, dragon: Dictionary, index: int) -> void:
 			Rect2(15, 8, 244, 140),
 			TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		)
-		portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		portrait_back.add_child(portrait)
 
 	var name := WidgetFactory.label(
@@ -110,7 +110,7 @@ func _add_dragon_card(parent: Control, dragon: Dictionary, index: int) -> void:
 		22,
 		UiTokens.INK_SOFT,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	level.position = Vector2(10, 229)
 	level.size = Vector2(290, 34)
@@ -126,7 +126,7 @@ func _add_dragon_card(parent: Control, dragon: Dictionary, index: int) -> void:
 		20,
 		UiTokens.GOLD if goal > 0 else Color("#4d9a70"),
 		HORIZONTAL_ALIGNMENT_CENTER,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	goal_label.position = Vector2(8, 271)
 	goal_label.size = Vector2(294, 34)

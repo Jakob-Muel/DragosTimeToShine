@@ -2,15 +2,15 @@
 
 [ext_resource type="Script" path="res://scripts/data/training_category_definition.gd" id="1_definition"]
 
-[ext_resource type="PackedScene" path="res://scenes/minigames/flight_game.tscn" id="2_game"]
+[ext_resource type="PackedScene" path="res://scenes/minigames/flame_shooter_game.tscn" id="2_game"]
 
 [resource]
 script = ExtResource("1_definition")
-id = &"flight"
-name_key = &"TALENT_FLIGHT_NAME"
-icon_glyph = "▲"
-accent_color = Color(0.227451, 0.717647, 0.87451, 1)
-minigame_route = &"flight_training"
+id = &"element_power"
+name_key = &"TALENT_ELEMENT_POWER_NAME"
+icon_glyph = "✦"
+accent_color = Color(0.937255, 0.545098, 0.164706, 1)
+minigame_route = &"flame_shooter"
 xp_per_level = 10
 xp_per_score = 1.0
 maximum_care_bonus = 0.25
@@ -19,4 +19,4 @@ contest_level = 5
 units_per_level = 10
 gold_reward = 1
 minigame_scene = ExtResource("2_game")
-instruction_key = &"FLIGHT_TAP_HINT"
+instruction_key = &"ELEMENT_TRAINING_HINT"

@@ -14,6 +14,7 @@ const DRAGON_DEFINITIONS := [
 ]
 const TRAINING_DEFINITIONS := [
 	preload("res://data/training/flight.tres"),
+	preload("res://data/training/element_power.tres"),
 ]
 const FUSION_RECIPES := [
 	preload("res://data/fusion/ember_marina.tres"),
@@ -92,6 +93,14 @@ func register_training_category(definition: TrainingCategoryDefinition) -> void:
 
 func get_training_category(category_id: StringName) -> TrainingCategoryDefinition:
 	return _training_categories.get(category_id) as TrainingCategoryDefinition
+
+
+func training_category_ids() -> Array[StringName]:
+	var result: Array[StringName] = []
+	for category_id: StringName in _training_categories:
+		result.append(category_id)
+	result.sort()
+	return result
 
 
 func register_fusion_recipe(recipe: FusionRecipe) -> void:

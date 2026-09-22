@@ -1,7 +1,6 @@
 extends GameScreen
 
-const ISLAND_TEXTURE := preload("res://assets/art/dragon_island_hd.png")
-const DRAGON_TEXTURE := preload("res://assets/art/dragon_pink_hd.png")
+const ISLAND_TEXTURE := preload("res://assets/art/comic/universal_island.png")
 const BUILD_INFO := preload("res://scripts/build_info.gd")
 
 
@@ -33,16 +32,18 @@ func build() -> void:
 	_build_top_bar(top_y)
 	_build_brand(top_y)
 
-	var dragon_top := top_y + 216.0
+	var island_scale := maxf(canvas_size.x / 720.0, canvas_size.y / 1565.0)
+	var meadow_y := (canvas_size.y - 1565.0 * island_scale) * 0.5 + 730.0 * island_scale
+	var dragon_top := meadow_y - 305.0
 	var dragon := WidgetFactory.dragon_presentation(
-		DRAGON_TEXTURE,
+		GameState.dragon_texture(GameState.get_dragon("luma")),
 		Rect2(170, dragon_top, 380, 330),
 		CanvasItem.TEXTURE_FILTER_LINEAR
 	)
 	add_child(dragon)
 
 	var action_y := clampf(canvas_size.y - 420.0, 850.0, 1100.0)
-	var greeting_y := minf(top_y + 558.0, action_y - 112.0)
+	var greeting_y := action_y - 112.0
 	_build_greeting(greeting_y)
 	_build_actions(action_y)
 
@@ -172,6 +173,16 @@ func _build_actions(y: float) -> void:
 	contest_button.pressed.connect(navigate.bind("flight_select", {}))
 	add_child(contest_button)
 	WidgetFactory.add_button_caption(contest_button, tr_text("CONTEST_CAPTION"))
+
+	var shooter_button := WidgetFactory.button(
+		tr_text("NAV_FLAME_RUN"),
+		Rect2(52, y + 256.0, 298, 82),
+		Color("#f47a4f"),
+		Color("#a9433c")
+	)
+	shooter_button.add_theme_font_size_override("font_size", 22)
+	shooter_button.pressed.connect(navigate.bind("training_session", {"talent_id": "element_power", "return_route": "main"}))
+	add_child(shooter_button)
 
 	var dragon_lab_button := WidgetFactory.button(
 		tr_text("NAV_DRAGON_LAB"),

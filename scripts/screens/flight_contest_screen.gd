@@ -2,11 +2,6 @@ extends GameScreen
 
 const PIXEL_ART := preload("res://scripts/ui/pixel_art.gd")
 const RACE_BACKGROUND := preload("res://scripts/ui/flight_race_background.gd")
-const OPPONENT_TEXTURES := [
-	preload("res://assets/art/flight/opponents/red_flight.png"),
-	preload("res://assets/art/flight/opponents/green_flight.png"),
-	preload("res://assets/art/flight/opponents/blue_flight.png"),
-]
 const OPPONENT_COLORS := [
 	Color("#e83d4b"),
 	Color("#27a96b"),
@@ -66,7 +61,7 @@ func build() -> void:
 		22,
 		UiTokens.PINK_DARK,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	goal.position = Vector2(94, 58)
 	goal.size = Vector2(484, 36)
@@ -85,7 +80,7 @@ func build() -> void:
 	for index in 3:
 		_add_racer(
 			tr_text("FLIGHT_RIVAL_NAME", {"number": index + 1}),
-			OPPONENT_TEXTURES[index],
+			ProceduralDragonTextures.texture_for([34, 37, 77][index], "flight"),
 			opponent_distances[index],
 			index + 1,
 			OPPONENT_COLORS[index],
@@ -135,7 +130,7 @@ func _add_racer(
 		22,
 		accent,
 		HORIZONTAL_ALIGNMENT_RIGHT,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	distance.position = Vector2(382, 10)
 	distance.size = Vector2(270, 36)
@@ -150,9 +145,11 @@ func _add_racer(
 	finish_marker.size = Vector2(6, 136)
 	finish_marker.color = UiTokens.INK
 	lane.add_child(finish_marker)
-	var finish_flag := WidgetFactory.label("⚑", 28, UiTokens.INK, HORIZONTAL_ALIGNMENT_CENTER, UiTokens.FONT_BOLD)
-	finish_flag.position = Vector2(FINISH_X + 54.0, 43)
-	finish_flag.size = Vector2(48, 36)
+	var finish_flag := WidgetFactory.texture_rect(
+		preload("res://assets/art/comic/ui_redesign/icons/finish_flag.png"),
+		Rect2(FINISH_X + 68.0, 43, 48, 42),
+		TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	)
 	lane.add_child(finish_flag)
 
 	var dragon := WidgetFactory.texture_rect(
@@ -160,8 +157,8 @@ func _add_racer(
 		Rect2(START_X, 58, RACER_SIZE.x, RACER_SIZE.y),
 		TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	)
-	dragon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	dragon.flip_h = true
+	dragon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	dragon.flip_h = false
 	dragon.pivot_offset = RACER_SIZE / 2.0
 	dragon.z_index = 10
 	lane.add_child(dragon)
@@ -270,7 +267,7 @@ func _show_result(reward: int) -> void:
 		34,
 		UiTokens.INK,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	result_distance.position = Vector2(25, 124)
 	result_distance.size = Vector2(550, 58)
@@ -283,7 +280,7 @@ func _show_result(reward: int) -> void:
 		25,
 		UiTokens.INK_SOFT,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	rival_result.position = Vector2(25, 192)
 	rival_result.size = Vector2(550, 48)
@@ -293,7 +290,7 @@ func _show_result(reward: int) -> void:
 		31,
 		UiTokens.GOLD if won else UiTokens.INK_SOFT,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	reward_label.position = Vector2(25, 258)
 	reward_label.size = Vector2(550, 58)

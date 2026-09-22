@@ -5,6 +5,7 @@ const PIXEL_ART := preload("res://scripts/ui/pixel_art.gd")
 var egg_id := ""
 var query_steps := true
 var step_error_message := ""
+var hatching := false
 var random := RandomNumberGenerator.new()
 
 
@@ -41,9 +42,10 @@ func _build_content() -> void:
 	add_child(sky)
 	var back := WidgetFactory.small_button("‹", Rect2(32, 44 + top_shift, 78, 72), UiTokens.CREAM)
 	back.pressed.connect(navigate.bind("eggs", {}))
+	back.visible = not bool(egg.get("starter", false))
 	add_child(back)
 	var title := WidgetFactory.label(
-		tr_text("EGG_DETAIL_TITLE"), 43, UiTokens.INK, HORIZONTAL_ALIGNMENT_CENTER, UiTokens.FONT_BOLD
+		tr_text("STARTER_EGG_TITLE" if bool(egg.get("starter", false)) else "EGG_DETAIL_TITLE"), 43, UiTokens.INK, HORIZONTAL_ALIGNMENT_CENTER, UiTokens.FONT_BOLD
 	)
 	title.position = Vector2(112, 46 + top_shift)
 	title.size = Vector2(496, 67)
@@ -72,11 +74,11 @@ func _build_content() -> void:
 	var progress := int(egg.get("progress_steps", 0))
 	var required := int(egg.get("required_steps", GameState.EGG_REQUIRED_STEPS))
 	var progress_label := WidgetFactory.label(
-		tr_text("EGG_STEP_PROGRESS", {"current": progress, "required": required}),
+		tr_text("STARTER_EGG_READY") if bool(egg.get("starter", false)) else tr_text("EGG_STEP_PROGRESS", {"current": progress, "required": required}),
 		25,
 		UiTokens.INK,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	progress_label.position = Vector2(30, 438)
 	progress_label.size = Vector2(520, 42)
@@ -107,6 +109,7 @@ func _build_content() -> void:
 	)
 	provider.position = Vector2(30, 548)
 	provider.size = Vector2(520, 32)
+	provider.visible = not bool(egg.get("starter", false))
 	egg_panel.add_child(provider)
 	if not step_error_message.is_empty():
 		var error_label := WidgetFactory.label(
@@ -123,7 +126,7 @@ func _build_content() -> void:
 
 	var action_y := 860.0 if not step_error_message.is_empty() else 840.0
 	var incubation_start := int(egg.get("incubation_start", 0))
-	if incubation_start == 0:
+	if incubation_start == 0 and not GameState.can_hatch(egg_id):
 		var start := WidgetFactory.button(
 			tr_text("START_HATCHING"),
 			Rect2(110, action_y + top_shift, 500, 110),
@@ -197,11 +200,14 @@ func add_test_steps() -> void:
 
 
 func hatch() -> void:
+	if hatching:
+		return
 	var egg := GameState.get_egg(egg_id)
 	var hatch_message_key := GameState.egg_hatch_message_key(egg)
 	var accent := _egg_accent_color(egg)
 	if not GameState.hatch_egg(egg_id):
 		return
+	hatching = true
 	var message := WidgetFactory.label(
 		tr_text(hatch_message_key),
 		48,
@@ -218,7 +224,7 @@ func hatch() -> void:
 	_burst_confetti(Vector2(canvas_size.x * 0.5, canvas_size.y * 0.48), 54, 3900)
 	var hatch_tween := create_tween()
 	hatch_tween.tween_interval(1.55)
-	hatch_tween.tween_callback(navigate.bind("dragons", {}))
+	hatch_tween.tween_callback(navigate.bind("habitat", {"selected_dragon_id": "luma"}) if bool(egg.get("starter", false)) else navigate.bind("dragons", {}))
 
 
 func _on_steps_ready(start_unix: int, steps: int) -> void:
@@ -258,7 +264,7 @@ func _add_egg_art(parent: Control, egg: Dictionary, rect: Rect2) -> void:
 			rect,
 			TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		)
-		egg_art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		egg_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		parent.add_child(egg_art)
 		return
 	var sunwing_egg := PIXEL_ART.PixelEgg.new()
@@ -267,25 +273,8 @@ func _add_egg_art(parent: Control, egg: Dictionary, rect: Rect2) -> void:
 	parent.add_child(sunwing_egg)
 
 
-func _egg_accent_color(egg: Dictionary) -> Color:
-	var definition := GameState.egg_definition(egg)
-	if definition != null:
-		if definition.has_type(&"fire") and definition.has_type(&"earth"):
-			return Color("#d9571f")
-		if definition.has_type(&"earth") and definition.has_type(&"water"):
-			return Color("#607d69")
-	match GameState.egg_kind(egg):
-		"fusion":
-			return Color("#824ca0")
-		"fire":
-			return Color("#d8492f")
-		"water":
-			return Color("#168ec8")
-		"earth":
-			return Color("#8b633d")
-		"ice":
-			return Color("#3187b8")
-	return UiTokens.PINK_DARK
+func _egg_accent_color(_egg: Dictionary) -> Color:
+	return UiTokens.GOLD_DARK
 
 
 func _burst_confetti(origin: Vector2, piece_count: int, layer: int) -> void:

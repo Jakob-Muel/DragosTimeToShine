@@ -39,7 +39,7 @@ func build() -> void:
 		Rect2(90, top_y + 150, 540, 330),
 		TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	)
-	dragon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	dragon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(dragon)
 	var name := WidgetFactory.label(
 		tr_text(GameState.dragon_name_key(selected_dragon)),
@@ -68,7 +68,7 @@ func build() -> void:
 		34,
 		UiTokens.PINK_DARK,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	level_label.position = Vector2(20, 12)
 	level_label.size = Vector2(536, 48)
@@ -81,7 +81,7 @@ func build() -> void:
 		23,
 		UiTokens.INK_SOFT,
 		HORIZONTAL_ALIGNMENT_CENTER,
-		UiTokens.FONT_BOLD
+		UiTokens.FONT_NUMERIC
 	)
 	xp_label.position = Vector2(20, 62)
 	xp_label.size = Vector2(536, 36)
@@ -108,7 +108,7 @@ func build() -> void:
 		UiTokens.PINK,
 		UiTokens.PINK_DARK
 	)
-	training.pressed.connect(navigate.bind("flight_training", {}))
+	training.pressed.connect(navigate.bind("training_session", {"talent_id": "flight", "dragon_id": selected_dragon_id, "return_route": "flight_hub"}))
 	add_child(training)
 	WidgetFactory.add_button_caption(training, tr_text("FLIGHT_TRAINING_CAPTION"))
 

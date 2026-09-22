@@ -1,42 +1,32 @@
 extends RefCounted
 
-## Small code-drawn art controls used by the prototype screens.
+## Shared comic illustrations. Legacy class names remain for scene compatibility.
 ## Keeping them here prevents presentation details from obscuring screen flow.
 
 
 class PixelSky:
 	extends Control
 	const LARGE_CLOUDS := [
-		preload("res://assets/art/ui_redesign/clouds/large_wide.png"),
-		preload("res://assets/art/ui_redesign/clouds/large_tall.png"),
-		preload("res://assets/art/ui_redesign/clouds/large_wisp.png"),
+		preload("res://assets/art/comic/ui_redesign/clouds/large_wide.png"),
+		preload("res://assets/art/comic/ui_redesign/clouds/large_tall.png"),
+		preload("res://assets/art/comic/ui_redesign/clouds/large_wisp.png"),
 	]
 	const SMALL_CLOUDS := [
-		preload("res://assets/art/ui_redesign/clouds/small_wide.png"),
-		preload("res://assets/art/ui_redesign/clouds/small_tall.png"),
-		preload("res://assets/art/ui_redesign/clouds/small_wisp.png"),
+		preload("res://assets/art/comic/ui_redesign/clouds/small_wide.png"),
+		preload("res://assets/art/comic/ui_redesign/clouds/small_tall.png"),
+		preload("res://assets/art/comic/ui_redesign/clouds/small_wisp.png"),
 	]
 
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		queue_redraw()
 
-	func _draw() -> void:
-		# Deliberately visible color bands and stepped clouds keep utility
-		# screens in the same pixel-art world as the islands.
-		var band_count := 12
-		var band_height := size.y / float(band_count)
-		var sky_top := Color("#75d4ec")
-		var sky_bottom := Color("#b9e8e7")
-		for band in band_count:
-			var amount := float(band) / float(band_count - 1)
-			draw_rect(
-				Rect2(0, band * band_height, size.x, band_height + 1.0),
-				sky_top.lerp(sky_bottom, amount)
-			)
+	const SKY := preload("res://assets/art/comic/sky.png")
 
-		_draw_cloud(Vector2(42, 225), true, 0)
+	func _draw() -> void:
+		draw_texture_rect(SKY, Rect2(Vector2.ZERO, size), false)
+		_draw_cloud(Vector2(42, 270), true, 0)
 		_draw_cloud(Vector2(602, 376), false, 1)
 		_draw_cloud(Vector2(72, size.y * 0.57), false, 0)
 		_draw_cloud(Vector2(-72, size.y - 134), true, 2)
@@ -61,12 +51,12 @@ class BlobShadow:
 		queue_redraw()
 
 	func _draw() -> void:
-		var points := PackedVector2Array()
 		var center := size / 2.0
-		for index in 32:
-			var angle := TAU * float(index) / 32.0
-			points.append(center + Vector2(cos(angle) * size.x * 0.46, sin(angle) * size.y * 0.38 * squish))
-		draw_colored_polygon(points, Color(0.16, 0.10, 0.20, 0.28))
+		draw_set_transform(center, 0, Vector2(1, size.y / maxf(1, size.x) * squish))
+		for layer in range(12, 0, -1):
+			var radius := size.x * (0.25 + float(layer) * 0.018)
+			draw_circle(Vector2.ZERO, radius, Color(0.16, 0.10, 0.20, 0.018), true, -1, true)
+		draw_set_transform(Vector2.ZERO)
 
 
 class PixelChevron:
@@ -83,58 +73,11 @@ class PixelChevron:
 			queue_redraw()
 
 	func _draw() -> void:
-		var pixel := 5.0
-		var cells := [
-			Vector2i(3, 0),
-			Vector2i(2, 1), Vector2i(3, 1),
-			Vector2i(1, 2), Vector2i(2, 2),
-			Vector2i(0, 3), Vector2i(1, 3),
-			Vector2i(1, 4), Vector2i(2, 4),
-			Vector2i(2, 5), Vector2i(3, 5),
-			Vector2i(3, 6),
-		]
-		var icon_size := Vector2(4.0 * pixel, 7.0 * pixel)
-		var origin := ((size - icon_size) * 0.5).floor()
-		for cell in cells:
-			draw_rect(Rect2(origin + Vector2(cell) * pixel, Vector2(pixel, pixel)), icon_color)
-
-
-class PixelGear:
-	extends Control
-
-	var icon_color := Color("#382b3d")
-
-	func _ready() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		queue_redraw()
-
-	func _notification(what: int) -> void:
-		if what == NOTIFICATION_RESIZED:
-			queue_redraw()
-
-	func _draw() -> void:
-		var pixel := 4.0
-		var rows := [
-			"..##.##..",
-			".#######.",
-			"###...###",
-			"###...###",
-			".##...##.",
-			"###...###",
-			"###...###",
-			".#######.",
-			"..##.##..",
-		]
-		var icon_size := Vector2(9.0 * pixel, 9.0 * pixel)
-		var origin := ((size - icon_size) * 0.5).floor()
-		for y in rows.size():
-			var row: String = rows[y]
-			for x in row.length():
-				if row[x] == "#":
-					draw_rect(
-						Rect2(origin + Vector2(x, y) * pixel, Vector2(pixel, pixel)),
-						icon_color
-					)
+		var center := size * 0.5
+		var points := PackedVector2Array([center + Vector2(7, -13), center + Vector2(-7, 0), center + Vector2(7, 13)])
+		draw_polyline(points, icon_color, 5.0, true)
+		for point in points:
+			draw_circle(point, 2.5, icon_color, true, -1, true)
 
 
 class ResourceIcon:
@@ -163,22 +106,16 @@ class ResourceIcon:
 		])
 		draw_colored_polygon(outline, Color("#2f2140"))
 		draw_colored_polygon(fill, Color("#f45b9d"))
-		draw_line(Vector2(7, 12), Vector2(29, 12), Color("#ffb2d1"), 3.0)
-		draw_line(Vector2(18, 6), Vector2(18, 33), Color("#fff1c9"), 3.0)
+		draw_line(Vector2(7, 12), Vector2(29, 12), Color("#ffb2d1"), 3.0, true)
+		draw_line(Vector2(18, 6), Vector2(18, 33), Color("#fff1c9"), 3.0, true)
 
 	func _draw_coin() -> void:
-		var outline := PackedVector2Array([
-			Vector2(10, 2), Vector2(28, 2), Vector2(36, 10), Vector2(36, 30),
-			Vector2(28, 38), Vector2(10, 38), Vector2(2, 30), Vector2(2, 10),
-		])
-		var fill := PackedVector2Array([
-			Vector2(12, 7), Vector2(26, 7), Vector2(31, 12), Vector2(31, 28),
-			Vector2(26, 33), Vector2(12, 33), Vector2(7, 28), Vector2(7, 12),
-		])
-		draw_colored_polygon(outline, Color("#2f2140"))
-		draw_colored_polygon(fill, Color("#ffc857"))
-		draw_rect(Rect2(15, 11, 8, 16), Color("#fff1c9"))
-		draw_rect(Rect2(11, 15, 16, 8), Color("#fff1c9"))
+		draw_circle(Vector2(19, 21), 18, Color("#382b3d"), true, -1, true)
+		draw_circle(Vector2(19, 20), 15, Color("#e9aa46"), true, -1, true)
+		draw_circle(Vector2(17, 18), 12, Color("#f8d783"), true, -1, true)
+		draw_arc(Vector2(18, 20), 10, PI, TAU * 0.88, 32, Color("#fff1d2"), 2, true)
+		draw_line(Vector2(19, 13), Vector2(19, 27), Color("#ad6f31"), 3, true)
+		draw_line(Vector2(14, 20), Vector2(24, 20), Color("#ad6f31"), 3, true)
 
 
 class PixelEgg:
@@ -188,23 +125,10 @@ class PixelEgg:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		queue_redraw()
 
+	const EGG := preload("res://assets/art/comic/sun_egg.png")
+
 	func _draw() -> void:
-		var outline := PackedVector2Array([
-			Vector2(size.x * 0.50, size.y * 0.03), Vector2(size.x * 0.72, size.y * 0.12),
-			Vector2(size.x * 0.88, size.y * 0.34), Vector2(size.x * 0.94, size.y * 0.64),
-			Vector2(size.x * 0.82, size.y * 0.88), Vector2(size.x * 0.50, size.y * 0.98),
-			Vector2(size.x * 0.18, size.y * 0.88), Vector2(size.x * 0.06, size.y * 0.64),
-			Vector2(size.x * 0.12, size.y * 0.34), Vector2(size.x * 0.28, size.y * 0.12),
-		])
-		var fill := PackedVector2Array()
-		var center := size * 0.5
-		for point in outline:
-			fill.append(center + (point - center) * 0.90)
-		draw_colored_polygon(outline, Color("#2f2140"))
-		draw_colored_polygon(fill, Color("#fff1c9"))
-		draw_circle(Vector2(size.x * 0.36, size.y * 0.43), size.x * 0.09, Color("#f45b9d"))
-		draw_circle(Vector2(size.x * 0.66, size.y * 0.62), size.x * 0.11, Color("#ffc857"))
-		draw_circle(Vector2(size.x * 0.55, size.y * 0.27), size.x * 0.06, Color("#8ed5aa"))
+		draw_texture_rect(EGG, Rect2(Vector2.ZERO, size), false)
 
 
 class ConfettiPiece:
