@@ -1,4 +1,5 @@
 extends SceneTree
+## requires-graphics
 
 ## Run with a rendering device (without --headless):
 ## Godot --path . --script tests/seeded_dragon_render_test.gd

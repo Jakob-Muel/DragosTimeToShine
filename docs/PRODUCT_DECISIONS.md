@@ -66,6 +66,27 @@ dragons start at 10. Shop/starter potentials roll 30 to 100 (provisional). In fu
 player picks, per attribute, which parent supplies the potential. Trained values are never
 inherited. Parents are never consumed.
 
+### D-10 Product = native Android and iOS apps (2026-09-23)
+**Highest-priority constraint when scoping any task.** The game ships as native mobile
+apps on **both Android and iOS** (Google Play and App Store). Godot is the engine, not the
+product platform. Consequences:
+
+- Android is a first-class target, not optional follow-up work after iOS. Every feature
+  must work on both, including platform services (HealthKit on iOS, Health Connect on
+  Android) behind one shared API.
+- The PWA/web build is only a fast review channel. Never scope a feature around
+  browser-only behavior, and never treat "works in the web build" as done.
+- Desktop runs (editor, headless tests) are development tools, not a target.
+- Design for touch only: no hover, no keyboard shortcuts, no right click. Tap targets sized
+  for children's fingers.
+- Respect phone constraints: portrait layout, safe areas and notches on both platforms,
+  Android back button/gesture, app pause/resume and backgrounding, mid-range Android
+  performance and memory, app size limits.
+- Store readiness is part of scope: permissions and privacy texts for both stores,
+  child-directed app rules (Google Play Families policy, Apple Kids category guidance).
+
+This overrides the report's "iPhone only" target.
+
 ## Open questions
 
 Record the answer as a new decision when the user settles one.

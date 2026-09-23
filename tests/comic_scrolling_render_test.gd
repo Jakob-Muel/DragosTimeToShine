@@ -1,4 +1,5 @@
 extends SceneTree
+## requires-graphics
 
 ## Render real playfields immediately before/after their repeat boundaries.
 ## Run with a graphics device, not --headless. No save data is touched.

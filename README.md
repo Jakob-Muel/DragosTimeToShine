@@ -1,6 +1,7 @@
 # Drago's Time to Shine
 
-A mobile-first Godot 4.6 prototype of a cozy dragon care, breeding and training game.
+A Godot 4.6 prototype of a cozy dragon care, breeding and training game for **Android and
+iOS**. The web build is only a review channel.
 
 ## Current prototype loop
 
@@ -85,20 +86,14 @@ a visual run; these launches interrupt their other work. Do not stop an existing
 Godot process. A captured macOS crash from an assistant-launched graphical process
 occurred during AppKit application registration, before game startup.
 
-Run the deterministic project tests without opening a window:
+Run all headless test suites (fails fast on errors, one timeout per suite):
 
 ```sh
-/Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --log-file /tmp/dragos-test.log --path . --script tests/smoke_test.gd
-/Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --log-file /tmp/dragos-test.log --path . --script tests/domain_test.gd
-/Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --log-file /tmp/dragos-test.log --path . --script tests/screen_routing_test.gd
-/Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --log-file /tmp/dragos-test.log --path . --script tests/font_coverage_test.gd
+tests/run_tests.sh
 ```
 
-The full list of suites (and which need a graphics device) is in `AGENTS.md`.
+The runner finds Godot in `/Applications`, in `PATH`, or via `GODOT=/path/to/godot`.
+`tests/run_tests.sh --graphics` also runs the rendering suites. Details are in `AGENTS.md`.
 
 ## Installable Web App
 

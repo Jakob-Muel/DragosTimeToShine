@@ -8,16 +8,21 @@ Product constraints come from `docs/PRODUCT_DECISIONS.md`. Current state is in
 `docs/STATUS.md`. The target architecture for talents, genomes and breeding is in
 `docs/BREEDING_AND_TALENTS_ARCHITECTURE.md`; this roadmap schedules it.
 
+**Platform rule (D-10): the product is a native Android and iOS game.** Scope every task
+for both phones. A task is not done when it only works in the editor or the web build.
+Platform features need a working path on both Android and iOS (or a graceful fallback on
+both). Anything that can only be verified on a device must be listed in the task report.
+
 Items marked **(needs decision Q-xx)** require an answer from the user before
 implementation. Prepare options, do not decide alone.
 
 ## Next up (short list)
 
-1. M0.1 Review and merge `progressTowards05` into `main` (the backlog is now committed).
-2. M0.2 Run every headless suite in CI with timeouts so failing asserts fail fast.
-3. M0.3 Hide the Dragon Lab from release builds.
+1. M0.1 Review and merge `progressTowards05` into `main`.
+2. M0.3 Hide the Dragon Lab from release builds.
+3. M0.7 Get an Android debug build running on a real phone.
 4. M1.1 Atomic save with backup.
-5. M2.1 Make attributes affect the Element Power shooter.
+5. M1.5 Android Health Connect plugin (egg hatching depends on steps).
 
 ## M0 Housekeeping
 
@@ -26,10 +31,11 @@ Goal: a clean, trustworthy base before new features.
 | Task | Files | Acceptance |
 | --- | --- | --- |
 | M0.1 Merge `progressTowards05` into `main` (backlog already committed in logical chunks) | whole repo | CI green on `main`; PWA deploys |
-| M0.2 Add all 12 headless suites to CI, each with `timeout-minutes` (a failed `assert` hangs Godot instead of exiting); optionally make tests call `quit(1)` on failure | `.github/workflows/deploy-pages.yml`, `tests/` | CI runs 12 suites; a broken test fails CI |
+| ~~M0.2 Run all headless suites in CI with timeouts~~ **Done 2026-09-23:** `tests/run_tests.sh` (auto-discovery, fail-fast on errors, timeouts), CI on every push/PR | `.github/workflows/deploy-pages.yml`, `tests/run_tests.sh` | Verified: assert, runtime error, engine error, hang, bad exit code and missing marker all fail |
 | M0.3 Show Dragon Lab only when `OS.is_debug_build()` | `main_menu_screen.gd` | Release export has no Dragon Lab button; routing test still passes |
 | M0.4 Remove dead code: `next_unowned_egg`, unused contest wrappers, and decide on `gems` (remove or give it a purpose) | `collection_service.gd`, `game_state.gd`, `main_menu_screen.gd` | No unused public API; save migration drops or keeps `gems` explicitly |
 | M0.5 Replace the `main.gd` route match with a registry dictionary (route to scene + param handler) | `main.gd`, `screen_router.gd` | Adding a screen touches one registry entry; routing test passes |
+| M0.7 Android debug build on a real phone: document the steps in `MOBILE_PIPELINE.md`, check layout, safe areas, touch, fonts and performance | `export_presets.cfg`, `docs/MOBILE_PIPELINE.md` | The core loop runs on an Android phone; issues are listed in `STATUS.md` |
 | M0.6 Decide on legacy art and screenshots (keep curated subset, move rest out) | `assets/art/*`, `docs/screenshots/` | Repo size reduced; no runtime reference broken (grep `res://` paths) |
 
 ## M1 Data model and save safety
@@ -42,6 +48,8 @@ Goal: saves cannot be lost, and every dragon carries the data future features ne
 | M1.2 Add `hp` attribute (potential + value, same rules as others) with migration | `dragon_attributes.gd`, `game_state.gd`, `attributes_screen.gd`, strings | Old saves gain `hp`; attribute tests cover it |
 | M1.3 Store `generator_version` with every dragon and egg appearance seed | `game_state.gd`, `seeded_dragon.gd` | Changing the generator later cannot change existing dragons |
 | M1.4 Child-friendly stat names in the UI **(needs decision Q-08)** | `strings.json` | Both locales updated; internal IDs unchanged |
+| M1.5 Android Health Connect plugin: package `StepHealthProvider.kt` as a Godot Android v2 plugin with the same `StepCounterPlugin` signals as iOS; custom Gradle build; `READ_STEPS` permission | `native/android/`, `export_presets.cfg`, `step_counter.gd` | Egg incubation works with real steps on Android; denial leaves the game playable; the test-step button is not shown in release builds |
+| M1.6 App lifecycle on both platforms: Android back gesture navigates back (quit only from the main menu), save on pause/background, re-query steps on resume | `main.gd`, `game_state.gd`, `step_counter.gd` | Tested headlessly where possible (notification handling) plus a device checklist |
 
 ## M2 Stats that matter
 
@@ -90,16 +98,17 @@ Goal: the confirmed long-term mode (D-03). **(needs decision Q-01)**
 | M5.3 Uses `hp`, `attack_power`, `attack_speed`, `movement_speed` from the stat snapshot | same | Tests cover stat scaling and one-result-per-run |
 | M5.4 Performance check with many enemies on an older iPhone | device | Stable frame rate |
 
-## M6 Release readiness
+## M6 Release readiness (both stores)
 
 | Task | Files | Acceptance |
 | --- | --- | --- |
-| M6.1 HealthKit device test pass (grant, deny, retry, restart, real walk) | device | Checklist in `MOBILE_PIPELINE.md` all green |
+| M6.1 Device test pass on iPhone and Android (HealthKit / Health Connect grant, deny, retry, restart, real walk) | devices | Checklist in `MOBILE_PIPELINE.md` all green on both |
 | M6.2 Step alternative without HealthKit **(needs decision Q-07)** | egg flow | Player can hatch without health access |
 | M6.3 Accessibility: reduced motion, adjustable minigame speed, larger text option | settings, minigames | Toggles persist and work |
 | M6.4 Audio: music and effects with mute toggle | new `audio` autoload | Playable without sound |
-| M6.5 TestFlight build | `MOBILE_PIPELINE.md` step 4 | Internal testers can install |
-| M6.6 Android Health Connect plugin | `native/android/` | Optional, after iOS |
+| M6.5 TestFlight build and Google Play internal testing track | `MOBILE_PIPELINE.md` | Internal testers can install on both platforms |
+| M6.6 Store compliance for a children's game: privacy labels / data safety form, Families policy and Kids category rules, age rating, health permission texts | store listings, `strings.json` | Both store submissions pass review |
+| M6.7 Performance on a mid-range Android phone and an older iPhone (frame rate, memory, app size) | devices | Stable frame rate in all minigames |
 
 ## Out of scope
 

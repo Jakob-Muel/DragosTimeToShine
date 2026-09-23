@@ -155,8 +155,8 @@ the English object, translating values, and keeping every key. Interpolated labe
 `{name}`-style values through `Localization.text(key, values)`.
 
 ## Validation
-See `AGENTS.md` section 4 for the full list of test suites, which need a graphics device,
-and which run in CI. Native HealthKit queries and physical safe-area placement still
+Run `tests/run_tests.sh` (see `AGENTS.md` section 4 for the suite list, the graphics
+suites and CI behavior). Native HealthKit queries and physical safe-area placement still
 require an iPhone.
 
 ## Change rules

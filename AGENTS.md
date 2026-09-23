@@ -11,8 +11,12 @@ in short minigames, enter peaceful contests, hatch eggs by walking real steps
 (HealthKit on iOS, test button on desktop/web), and breed new dragons whose appearance is
 generated procedurally from a seed.
 
-Target players: children around 6 and 11. Primary platform: iPhone. A PWA web build is the
-fast review channel (GitHub Pages, deployed on every push to `main`).
+**The product is a native mobile game for Android and iOS** (Google Play and App Store).
+Godot is only the engine. Both platforms are first-class; this is the most important
+constraint when you scope or design any task (see decision D-10). A PWA web build exists
+purely as a fast review channel (GitHub Pages, deployed on every push to `main`).
+
+Target players: children around 6 and 11.
 
 ## 2. Source-of-truth order
 
@@ -32,6 +36,11 @@ and record the answer in `PRODUCT_DECISIONS.md`.
 
 ## 3. Non-negotiable product rules (short form)
 
+- **Android and iOS are the product.** Every feature must work on both phones, with touch
+  input, portrait layout, safe areas, Android back handling and app pause/resume in mind.
+  Platform APIs (steps, haptics, notifications, purchases) need an implementation or a
+  graceful fallback on both platforms behind one shared service. Web and desktop are
+  development tools only; "works in the browser" is not done.
 - **Engine stays Godot.** Do not propose or start a SwiftUI/SpriteKit rewrite.
 - **No Pokémon-style battles and no PvP.** No turn-based dragon-vs-dragon fights, no
   opponent ladder. Action minigames that contain combat mechanics are allowed
@@ -46,69 +55,69 @@ and record the answer in `PRODUCT_DECISIONS.md`.
   punishes the player harshly. Explain with icons and stars first, numbers second.
 - **Privacy.** Never store raw health samples. Only aggregate step results.
 
-## 4. Commands
+## 4. Commands and tests
 
-**From an agent sandbox (Linux, including the Cowork VM on the user's Mac):** run
-
-```sh
-tools/agent_test.sh            # all headless suites
-tools/agent_test.sh smoke domain
-```
-
-The macOS app in `/Applications` cannot run inside a Linux sandbox, so the script downloads
-the Linux build of Godot 4.6.1 into `~/godot`, copies the project to `~/work/proj` (the
-user's `.godot` cache and saves stay untouched), imports assets once (a few minutes the
-first time) and runs each suite with a timeout. It exits non-zero on any failure.
-Do not claim tests pass unless you ran them.
-
-**On the user's Mac directly** the binary is `/Applications/Godot.app/Contents/MacOS/Godot`.
-Always run headless with an explicit writable log file:
+All tests go through one runner, `tests/run_tests.sh`, which CI, agents and developers
+share. It discovers every `tests/*_test.gd`, runs each suite headless with a timeout, and
+fails a suite on the first `SCRIPT ERROR` (failed assert, runtime error) or engine
+`ERROR:`, on a non-zero exit, or when the final `...: valid` line is missing. This matters
+because **a failed `assert` does not exit Godot**; without the runner a broken test hangs.
 
 ```sh
-GODOT=/Applications/Godot.app/Contents/MacOS/Godot
-$GODOT --headless --log-file /tmp/dragos-test.log --path . --script tests/<name>_test.gd
+tests/run_tests.sh                 # all headless suites (needs GODOT or Godot in PATH / /Applications)
+tests/run_tests.sh smoke domain    # selected suites
+tests/run_tests.sh --graphics      # also the rendering suites (needs a real display)
+tests/run_tests.sh --list
 ```
 
-**A failed `assert` does not exit.** Godot prints `SCRIPT ERROR: Assertion failed` and then
-hangs, because `quit()` is never reached. Always run suites with a timeout and treat a
-timeout as a failure. Tests also fail if assets were never imported (missing
-`.godot/imported/...` errors); import first.
+**From an agent sandbox (Linux, including the Cowork VM on the user's Mac)** use
+`tools/agent_test.sh [suite ...]`. The macOS app in `/Applications` cannot run in Linux,
+so the script downloads Linux Godot 4.6.1 into `~/godot`, copies the project to
+`~/work/proj` (the user's `.godot` cache and saves stay untouched), imports assets once (a
+few minutes the first time) and then calls the runner. Do not claim tests pass unless you
+ran them.
 
-Headless test suites (each prints `... valid` and quits on success):
+**On the user's Mac** the runner finds `/Applications/Godot.app/Contents/MacOS/Godot`.
+Only headless runs unless the user asks for a visual run; never launch the editor or a
+windowed game, and never stop an existing Godot process. Test scripts disable persistence
+(`GameState.persistence_enabled = false` under `--script`), so they never touch the
+player's save. Assets must be imported first (missing `.godot/imported/...` errors mean
+they were not).
+
+**CI** (`.github/workflows/deploy-pages.yml`) runs every headless suite on every push and
+pull request (step timeouts, results in the job summary), then checks the web export.
+Pages deploys only from `main`.
+
+Headless suites:
 
 | Suite | Covers |
 | --- | --- |
-| `smoke_test.gd` | Main player loop, save migration, shop, contest, reset |
-| `domain_test.gd` | Catalog, fusion rules, care, letter trace pad |
-| `starter_progression_test.gd` | Starter egg flow |
-| `random_eggs_test.gd` | Shop random eggs, fixed hidden result |
-| `attribute_genetics_test.gd` | Attribute potentials and selectable inheritance |
-| `training_contract_test.gd` | `TalentMinigame` result contract, duplicate guard |
-| `training_session_test.gd` | Shared training session screen |
-| `flame_shooter_test.gd` | Element Power minigame |
-| `screen_routing_test.gd` | Every screen instantiates through the router |
-| `ui_safe_area_test.gd` | Safe-area layout at phone sizes |
-| `font_coverage_test.gd` | Nunito covers German/English glyphs |
-| `seeded_dragon_test.gd` | Deterministic dragon traits |
+| `smoke` | Main player loop, save migration, shop, contest, reset |
+| `domain` | Catalog, fusion rules, care, letter trace pad |
+| `starter_progression` | Starter egg flow |
+| `random_eggs` | Shop random eggs, fixed hidden result |
+| `attribute_genetics` | Attribute potentials and selectable inheritance |
+| `training_contract` | `TalentMinigame` result contract, duplicate guard |
+| `training_session` | Shared training session screen |
+| `flame_shooter` | Element Power minigame |
+| `screen_routing` | Every screen instantiates through the router |
+| `ui_safe_area` | Safe-area layout at phone sizes |
+| `font_coverage` | Nunito covers German/English glyphs |
+| `seeded_dragon` | Deterministic dragon traits |
+| `dragon_presentation` | Dragon presentation data and textures |
 
-Suites that need a real graphics device (run without `--headless`, only when the user asks
-for a visual run): `seeded_dragon_render_test.gd`, `procedural_dragon_views_test.gd`,
-`comic_scrolling_render_test.gd`. `dragon_presentation_test.gd` reads rendered texture
-images and probably needs one too (unverified).
+Rendering suites (marked `## requires-graphics`, skipped by default):
+`seeded_dragon_render`, `procedural_dragon_views`, `comic_scrolling_render`.
 
-CI (`.github/workflows/deploy-pages.yml`) currently runs only smoke, domain,
-training_contract, training_session, screen_routing and font_coverage before exporting the
-PWA.
+**Writing a test:** create `tests/<name>_test.gd` that `extends SceneTree`, does its work in
+`_init()` (use `await` for frames or timers), asserts, prints `<Name>: valid` as the last
+step and calls `quit()`. The runner picks it up automatically, including in CI. Add
+`## requires-graphics` on line 2 if it needs a display. Add `## allow-engine-errors` only
+if the test deliberately triggers `push_error`. Keep suites deterministic and under a
+few seconds; never depend on the player's save or wall-clock time.
 
-Rules for launching Godot as an agent:
-
-- Headless only, unless the user explicitly requests a visual run.
-- Never launch the editor or a windowed game, and never stop an existing Godot process.
-- Test scripts disable persistence (`GameState.persistence_enabled = false` when
-  `--script` is present), so they never touch the player's save.
-
-Web export: `$GODOT --headless --path . --export-release "Web PWA" build/web/index.html`.
-iOS: see `docs/MOBILE_PIPELINE.md`.
+Web export: `godot --headless --path . --export-release "Web PWA" build/web/index.html`.
+Android and iOS: see `docs/MOBILE_PIPELINE.md`.
 
 ## 5. Repository map
 
@@ -198,7 +207,7 @@ docs/                   Design and architecture docs (index in section 9)
 | `docs/FLIGHT_GAMEPLAY.md` | Flight training and contest rules | Current |
 | `docs/UNIFIED_DRAGONS.md` | Procedural dragon rendering pipeline, universal island | Current |
 | `docs/COMIC_ART.md` | Comic art direction and asset rebuild | Current, canonical style |
-| `docs/MOBILE_PIPELINE.md` | iOS/Android export, HealthKit | Current |
+| `docs/MOBILE_PIPELINE.md` | Android and iOS export, HealthKit, Health Connect | Current |
 | `native/README.md` | Step-counter plugin contract | Current |
 | `docs/ICE_DRAGON.md` | Frosteros legacy notes | Legacy |
 | `docs/REVIEW_PROMPTS.md` | Standalone review prompts for agents | Partly outdated |
@@ -208,7 +217,10 @@ docs/                   Design and architecture docs (index in section 9)
 ## 10. Definition of done for an agent change
 
 1. Behavior change is covered by a headless test, or you state why it cannot be.
-2. Both locales have every new key.
-3. Save shape changes are migrated and tested.
-4. The relevant docs (`STATUS.md` at minimum) are updated in the same change.
-5. You report honestly which tests you ran and which you could not run.
+2. You considered both Android and iOS: touch-only input, layout at the four phone sizes,
+   platform services with a fallback. Anything that still needs a device check is listed
+   in your report.
+3. Both locales have every new key.
+4. Save shape changes are migrated and tested.
+5. The relevant docs (`STATUS.md` at minimum) are updated in the same change.
+6. You report honestly which tests you ran and which you could not run.

@@ -6,8 +6,10 @@ The repository already supports a GitHub Pages PWA. The native game can use the 
 project and UI; it does **not** need to be rewritten as an Xcode app. Xcode is the final
 iOS packaging, signing, capability, and device-testing layer.
 
-The iOS HealthKit step plugin is implemented, packaged, and enabled. Android remains
-optional provider source work.
+The game ships on **both Android and iOS** (decision D-10 in `PRODUCT_DECISIONS.md`);
+neither platform is optional. The iOS HealthKit step plugin is implemented, packaged, and
+enabled. The Android Health Connect provider exists only as source and still needs to be
+packaged as a Godot Android plugin; closing that gap is required, not optional.
 
 ## Recommended progression
 
@@ -78,7 +80,7 @@ When local device builds are reliable:
 Apple's [distribution guide](https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases)
 covers archive and TestFlight distribution.
 
-### 5. Package Android in parallel
+### 5. Package Android (required, in parallel with iOS)
 
 1. Create a Godot Android v2 plugin/AAR around
    `native/android/.../StepHealthProvider.kt`.

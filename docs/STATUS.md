@@ -14,7 +14,7 @@ Legend: **Done** works end to end · **Partial** exists with known gaps · **Mis
 | Shop, generic egg for 1 gold | Done | `shop_screen.gd`, `GameState.purchase_egg` | Pool: luma, frost, ember, marina, terra |
 | Egg incubation by steps | Done | `egg_detail_screen.gd`, `step_counter.gd` | 5,000 steps; desktop/web +250 test button; progress never decreases |
 | HealthKit plugin (iOS) | Partial | `ios/plugins/step_counter/`, `native/` | Built and enabled; needs fresh device testing of denial, restart, real walks |
-| Health Connect (Android) | Missing | `native/android/` | Provider source only, no plugin packaging |
+| Health Connect (Android) | Missing | `native/android/` | Provider source only, no plugin packaging. **Required for launch (D-10)** |
 | Step ledger / allocation | Missing | | Steps count per egg since incubation start; no shared ledger |
 | No-HealthKit alternative | Missing | | Only the desktop/web test button |
 | Den, dragon list, egg list | Done | `den_screen.gd`, `dragon_list_screen.gd`, `egg_list_screen.gd` | Capacity 12 (dragons + eggs) |
@@ -40,8 +40,10 @@ Legend: **Done** works end to end · **Partial** exists with known gaps · **Mis
 | Settings, language, reset | Done | `settings_screen.gd` | |
 | Save and migration | Partial | `game_state.gd` | Schema 11 with migrations; no atomic write, backup or checksum |
 | Responsive layout, safe areas | Done | `game_canvas.gd`, `ui_safe_area_test.gd` | 720-wide logical canvas |
-| PWA deploy | Done | `.github/workflows/deploy-pages.yml` | Runs 6 of 12 headless suites |
+| CI and PWA deploy | Done | `.github/workflows/deploy-pages.yml`, `tests/run_tests.sh` | All 13 headless suites on every push and PR, fail-fast runner; Pages deploys from `main` |
 | iOS export | Partial | `tools/export_ios.sh`, `docs/MOBILE_PIPELINE.md` | No TestFlight yet |
+| Android export | Partial | `export_presets.cfg` (Android preset) | Preset exists; no documented device run, no custom Gradle build, no Play test track |
+| Android back button / app lifecycle | Missing | | Back gesture, pause/resume and backgrounding not handled or tested |
 | Accessibility (reduced motion, text size, game speed) | Missing | | |
 | Audio | Missing | | No sound or music |
 
@@ -57,11 +59,9 @@ Legend: **Done** works end to end · **Partial** exists with known gaps · **Mis
    wrappers in `GameState` duplicate the generic path.
 5. **Save writes are not atomic.** `save_game()` overwrites the file directly; a crash
    mid-write can lose the save. No backup or checksum.
-6. **CI gaps.** `starter_progression`, `random_eggs`, `attribute_genetics`,
-   `flame_shooter`, `ui_safe_area` and `seeded_dragon` are not run in CI. A failed `assert`
-   makes Godot hang instead of exiting (verified 2026-09-22), and the CI steps have no
-   timeout, so a broken test would block the job for hours instead of failing fast.
-   All 12 headless suites passed on 2026-09-22 via `tools/agent_test.sh`.
+6. **Rendering suites are not in CI.** The three `## requires-graphics` suites need a
+   display (run them on the Mac with `tests/run_tests.sh --graphics`). All 13 headless
+   suites pass as of 2026-09-23.
 7. **Fusion species fallback.** Pairs without a recipe produce parent A's species; the
    child's look is a fresh random seed, so inheritance is not visible.
 8. **Routing is a hand-written match block** in `main.gd`; every new screen touches it.

@@ -1,4 +1,5 @@
 extends SceneTree
+## requires-graphics
 const TEXTURES := preload("res://scripts/ui/procedural_dragon_textures.gd")
 func _init() -> void:
 	call_deferred("_run")
