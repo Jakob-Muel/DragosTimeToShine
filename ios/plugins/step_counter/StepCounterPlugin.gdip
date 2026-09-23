@@ -8,10 +8,11 @@ deinitialization="unregister_step_counter_types"
 [dependencies]
 linked=[]
 embedded=[]
-system=["HealthKit.framework"]
+system=["HealthKit.framework", "UIKit.framework", "QuartzCore.framework", "Metal.framework", "IOSurface.framework", "CoreVideo.framework", "CoreGraphics.framework", "AudioToolbox.framework", "AVFoundation.framework", "CoreMotion.framework", "GameController.framework", "Security.framework"]
 capabilities=[]
 files=[]
 linker_flags=["-ObjC"]
 
 [plist]
 NSHealthShareUsageDescription:string="Your steps incubate dragon eggs. Drago's stores only the total progress, never individual Health samples."
+NSHealthUpdateUsageDescription:string="Drago's only reads your step count and does not save or update data in Apple Health."

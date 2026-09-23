@@ -1,5 +1,11 @@
 # Evaluation prompts
 
+> **Status 2026-09-22.** Several prompts describe an older codebase. Adjust before use:
+> #3 is largely done (`main.gd` is about 580 lines and every screen is a standalone
+> scene); #6 is partly done (saves have `schema_version` 11 and normalization, but writes
+> are not atomic); #7 assumes pixel art, which was dropped for the comic style (D-04);
+> #9's numbers are outdated (`docs/screenshots/` is about 45 MB). Prompt #1 was removed.
+
 Each prompt is standalone. Give one to an agent; it should investigate and report,
 not change code.
 

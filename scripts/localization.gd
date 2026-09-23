@@ -3,7 +3,7 @@ extends Node
 signal locale_changed(locale: String)
 
 const CATALOG_PATH := "res://localization/strings.json"
-const DEFAULT_LOCALE := "en"
+const DEFAULT_LOCALE := "de"
 
 var _catalog: Dictionary = {}
 var _active_locale := DEFAULT_LOCALE

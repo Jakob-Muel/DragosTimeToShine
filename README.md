@@ -1,28 +1,37 @@
 # Drago's Time to Shine
 
-A mobile-first Godot 4.6 proof of concept for a cozy dragon care game.
+A Godot 4.6 prototype of a cozy dragon care, breeding and training game for **Android and
+iOS**. The web build is only a review channel.
 
 ## Current prototype loop
 
-1. Choose **Den** from the main menu.
-2. Choose **Dragons** to visit Luma, or **Eggs** to inspect incubating eggs.
+1. Start a new game with **one free egg**. Press **Hatch now** to meet your first dragon immediately.
+2. Visit your dragon in its habitat. Later, choose **Den → Dragons** or **Eggs** to manage your collection.
 3. Select a dragon and press **Feed** to drop a berry. The dragon walks over
    with a paper-sprite bob, eats it, and gains care/hunger progress.
-4. Press **Groom** for a close-up care view. Drag the pixel comb inside the
-   framed grooming area. Clean and stretching react over the dragon's visible pixels.
-5. Choose **Contest** to enter Flight School. In **Flight Training**, tap to
-   flap between rock spikes. Each cleared obstacle awards one XP, every ten XP
-   adds one Flight Level, and training continues until Luma hits an obstacle.
-6. Reach Flight Level 5 to unlock the **Flight Contest**. The selected dragon
-   then glides 50 metres and wins one gold coin.
-7. Open **Shop** and spend one gold coin on a **Frost Crystal Egg**. Start
-   incubation and walk 1,000 steps to hatch Frost, an ice dragon. Desktop/web
-   builds provide a test-step button.
-8. Select Frost in the den to visit a dedicated snow-and-crystal island. Care,
-   grooming, flight XP, and contest progress remain attached to the selected
-   dragon.
+4. Press **Groom** for a close-up care view. Drag the comb inside the
+   framed grooming area. Clean and stretching react over the dragon's visible body.
+5. Choose **Contest**, pick a dragon, and open its Flight hub. In **Flight Training**, tap
+   to flap between rock spikes. Each cleared obstacle awards one XP, every ten XP adds one
+   Flight Level, and training continues until the dragon hits an obstacle.
+6. Reach Flight Level 5 to unlock the first **Flight Contest** (50 m). Later goals are
+   70 m (Level 7) and 100 m (Level 10). Each win awards one gold coin.
+   **Element Power** training (main menu) is a top-down shooter in which the dragon fires
+   automatically.
+7. Open **Shop** from the main menu and spend one gold coin on a **Dragon Egg**.
+   It contains a random base dragon with individual attribute potentials. Start incubation and walk 5,000 steps
+   to reveal it. Desktop/web builds provide a test-step button.
+8. Select the new dragon in the den to visit its island. Care, grooming, flight XP, and contest progress remain attached to
+   the selected dragon.
 
 Game state is saved locally between sessions.
+
+Use the gear button on the main menu to open **Settings**, switch between
+English and German, or reset all game progress after a confirmation step.
+Older saves gain individual attribute potentials while retaining their dragons and progress.
+Multiple dragons of the same type are supported. Open **Stats / Werte** in a dragon’s
+habitat to train attack power, attack speed, and movement speed up to their limits.
+Fusion lets you select one parent’s potential per attribute; offspring start untrained.
 
 ## Run
 
@@ -45,21 +54,46 @@ The responsive layouts are tested at 750×1334 (iPhone SE), 1179×2556
 Android). Android and iOS export presets are included; platform signing and
 toolchains still need to be configured on the export machine.
 
+For iOS, install Godot 4.6.1 and its export templates, then run
+`tools/repair_godot_ios_template.sh` once on a new Mac. After that, Godot's normal
+**Export Project** flow produces an Xcode project that builds for both an arm64 iPhone
+and an arm64 Simulator without manual linker edits. Use `tools/export_ios.sh debug`
+when you also want the full device-and-Simulator validation pass.
+
 ## Project documentation
 
+AI agents: start with [AGENTS.md](AGENTS.md). Current state and plan:
+[Status](docs/STATUS.md), [Roadmap](docs/ROADMAP.md),
+[Product decisions](docs/PRODUCT_DECISIONS.md).
+
+- [DraGO: Produktanforderungen und Implementierungsplan (Originalbericht)](docs/requirements/DRAGO_PRODUKTANFORDERUNGEN_UND_IMPLEMENTIERUNGSPLAN.html)
+
+- [Soll-Ist-Abgleich zum Produktbericht](docs/requirements/SOLL_IST_ABGLEICH.md)
 - [Intended gameplay loop and progression](docs/GAMEPLAY_LOOP.md)
 - [Architecture and module boundaries](docs/ARCHITECTURE.md)
+- [Modular breeding and talent architecture](docs/BREEDING_AND_TALENTS_ARCHITECTURE.md)
 - [Flight training, contest, and reward rules](docs/FLIGHT_GAMEPLAY.md)
-- [Frost egg, ice dragon, and winter island](docs/ICE_DRAGON.md)
+- [Procedural dragons and universal island](docs/UNIFIED_DRAGONS.md)
+- [Comic art direction](docs/COMIC_ART.md)
+- [Frosteros (legacy)](docs/ICE_DRAGON.md)
 - [Native iOS/Android build pipeline](docs/MOBILE_PIPELINE.md)
 - [Step-counter plugin contract](native/README.md)
 
-Run the gameplay smoke test without opening a window:
+During assistant work, use only headless Godot checks with an explicit writable
+log file (for example `--headless --log-file /tmp/dragos-test.log`). Do not launch
+windowed Godot, the editor, or screenshot/render checks unless the user requests
+a visual run; these launches interrupt their other work. Do not stop an existing
+Godot process. A captured macOS crash from an assistant-launched graphical process
+occurred during AppKit application registration, before game startup.
+
+Run all headless test suites (fails fast on errors, one timeout per suite):
 
 ```sh
-/Applications/Godot.app/Contents/MacOS/Godot \
-  --headless --path . --script tests/smoke_test.gd
+tests/run_tests.sh
 ```
+
+The runner finds Godot in `/Applications`, in `PATH`, or via `GODOT=/path/to/godot`.
+`tests/run_tests.sh --graphics` also runs the rendering suites. Details are in `AGENTS.md`.
 
 ## Installable Web App
 

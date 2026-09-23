@@ -1,42 +1,38 @@
-# Frost: Egg, Dragon, and Island
+# Frosteros: Egg, Dragon, and Island
 
-## Player flow
+## Current status
+> **Legacy doc.** Frosteros (`frost`) is now a normal member of the shop's random egg
+> pool and is drawn with the shared procedural renderer and universal island like every
+> other dragon. The dedicated Frost Crystal Egg and winter island below are legacy assets.
 
-1. Win one gold coin by reaching Flight Level 5 and completing a 50-metre
-   Flight Contest glide.
-2. Buy the **Frost Crystal Egg** in the shop for one gold.
-3. Start incubation and accumulate 1,000 steps.
-4. Hatch Frost, whose saved species is `ice`.
-5. Select Frost in the dragon den to visit the snow-and-crystal island.
+The separate ice egg kind is not sold. Old saves that contain a Frost egg migrate it to the
+generic 5,000-step egg (schema 9 migrated old 1,000-step eggs). Existing Frosteros dragons
+keep their care and training progress.
 
-Frost uses the same care, grooming, flight-training, and contest systems as the
-starter dragon. Flight XP is stored on each dragon, so progress follows the
-selected dragon.
+## Dragon data
 
-## Species data
+Eggs and owned dragons store a stable dragon-definition ID. Definitions own names,
+types, egg kinds, and art:
 
-Eggs store a stable `kind`, and dragons store a stable `species`. The current
-mapping is:
+| Definition | Egg kind | Hatched dragon | Types | Habitat |
+| --- | --- | --- | --- | --- |
+| `frost` | `ice` | Frosteros | `ice` | Ice island |
+| `nova` | `sunwing` | Nova | `sunwing` | Green island |
 
-| Egg kind | Hatched dragon | Dragon species | Habitat |
-| --- | --- | --- | --- |
-| `ice` | Frost | `ice` | Ice island |
-| `sunwing` | Nova | `sunwing` | Green island |
-
-Older saves without these fields default to `sunwing`. Display names remain
-localization keys rather than save-file text.
+Older `kind` and `species` values migrate to definition IDs when loaded. Display names
+remain localization keys rather than save-file text.
 
 ## Art assets
 
 - `assets/art/ice/ice_egg.png`: transparent gameplay egg sprite.
-- `assets/art/ice/ice_dragon_hd.png`: transparent Frost sprite prepared from
+- `assets/art/ice/ice_dragon_hd.png`: transparent Frosteros sprite prepared from
   the supplied dragon reference.
 - `assets/art/ice/ice_island_hd.png`: portrait winter habitat background.
 - `assets/art/ice/ice_egg_chroma.png`: generated egg source on a chroma
   background.
 - `assets/art/ice/ice_dragon_source.png`: original supplied dragon reference.
 
-The egg was generated to inherit Frost's pale-blue, white, cyan-crystal, and
+The egg was generated to inherit Frosteros's pale-blue, white, cyan-crystal, and
 dark-outline visual language. The island was generated as a winter counterpart
 to the original habitat, with snow, ice, a frozen pond, cyan crystals, and an
 open center for the dragon and care interactions.
@@ -54,6 +50,6 @@ crisp.
 
 ## Validation
 
-`tests/smoke_test.gd` verifies the purchase, `ice` egg kind, 1,000-step
-incubation, Frost hatch, species-specific habitat texture, grooming, per-dragon
-Flight Level 5 progression, contest completion, and gold reward.
+`tests/domain_test.gd` verifies that the Frosteros definition remains available for
+legacy data. `tests/smoke_test.gd` verifies that the active shop rejects ice-egg
+purchases without spending gold.

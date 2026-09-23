@@ -9,8 +9,38 @@ EXPORT_DIR="$PROJECT_ROOT/build/ios"
 IPA_PATH="$EXPORT_DIR/DragosTimeToShine.ipa"
 APP_PATH="$EXPORT_DIR/DragosTimeToShine.xcarchive/Products/Applications/DragosTimeToShine.app"
 PRESET_PATH="$PROJECT_ROOT/export_presets.cfg"
+TEMPLATE_PATH=${GODOT_IOS_TEMPLATE_PATH:-"$HOME/Library/Application Support/Godot/export_templates/4.6.1.stable/ios.zip"}
+TEMPLATE_CHECK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/dragos-ios-export.XXXXXX")
 
-if ! grep -Fq 'entitlements/additional="<key>com.apple.developer.healthkit</key>\n<true/>"' "$PRESET_PATH"; then
+cleanup() {
+	rm -rf "$TEMPLATE_CHECK_DIR"
+}
+trap cleanup EXIT
+
+if [ ! -f "$TEMPLATE_PATH" ]; then
+	echo "ERROR: Godot 4.6.1 iOS export template not found at $TEMPLATE_PATH" >&2
+	exit 1
+fi
+
+for configuration in debug release; do
+	template_library="$TEMPLATE_CHECK_DIR/libgodot-$configuration-simulator.a"
+	unzip -p "$TEMPLATE_PATH" \
+		"libgodot.ios.$configuration.xcframework/ios-arm64_x86_64-simulator/libgodot.a" \
+		> "$template_library"
+	if ! lipo -archs "$template_library" | grep -qw arm64; then
+		echo "ERROR: The Godot $configuration iOS Simulator template has no arm64 slice." >&2
+		echo "Run tools/repair_godot_ios_template.sh once, then export again." >&2
+		exit 1
+	fi
+done
+
+if ! awk '
+	index($0, "entitlements/additional=\"<key>com.apple.developer.healthkit</key>") {
+		getline
+		if ($0 == "<true/>\"") found = 1
+	}
+	END { exit found ? 0 : 1 }
+' "$PRESET_PATH"; then
 	echo "ERROR: The iOS export preset is missing the HealthKit entitlement." >&2
 	exit 1
 fi
@@ -56,10 +86,49 @@ if ! /usr/libexec/PlistBuddy -c 'Print :NSHealthShareUsageDescription' "$APP_PAT
 	exit 1
 fi
 
+if ! /usr/libexec/PlistBuddy -c 'Print :NSHealthUpdateUsageDescription' "$APP_PATH/Info.plist" >/dev/null; then
+	echo "ERROR: Export succeeded, but Info.plist has no HealthKit update explanation required by App Store validation." >&2
+	exit 1
+fi
+
 if ! grep -Fq 'StepCounterPlugin' "$EXPORT_DIR/DragosTimeToShine/dummy.cpp"; then
 	echo "ERROR: Export succeeded, but StepCounterPlugin was not registered." >&2
 	exit 1
 fi
 
+GODOT_SIM_LIBRARY="$EXPORT_DIR/DragosTimeToShine.xcframework/ios-arm64_x86_64-simulator/libgodot.a"
+PLUGIN_SIM_LIBRARY="$EXPORT_DIR/DragosTimeToShine/dylibs/ios/plugins/step_counter/StepCounterPlugin.xcframework/ios-arm64-simulator/libStepCounterPlugin.a"
+
+for library in "$GODOT_SIM_LIBRARY" "$PLUGIN_SIM_LIBRARY"; do
+	if [ ! -f "$library" ] || ! lipo -archs "$library" | grep -qw arm64; then
+		echo "ERROR: Exported Simulator library is missing arm64: $library" >&2
+		exit 1
+	fi
+done
+
+for framework in UIKit QuartzCore Metal IOSurface CoreVideo CoreGraphics AudioToolbox AVFoundation CoreMotion GameController Security HealthKit; do
+	if ! grep -Fq "$framework.framework" "$EXPORT_DIR/DragosTimeToShine.xcodeproj/project.pbxproj"; then
+		echo "ERROR: Exported Xcode project does not link $framework.framework." >&2
+		exit 1
+	fi
+done
+
+if grep -Fq -- '-Wl,-u,_main' "$EXPORT_DIR/DragosTimeToShine.xcodeproj/project.pbxproj"; then
+	echo "ERROR: Exported Xcode project still contains the obsolete forced _main flag." >&2
+	exit 1
+fi
+
+SIMULATOR_DERIVED_DATA="$TEMPLATE_CHECK_DIR/DerivedData"
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild \
+	-project "$EXPORT_DIR/DragosTimeToShine.xcodeproj" \
+	-scheme DragosTimeToShine \
+	-configuration "$(printf '%s' "$EXPORT_MODE" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')" \
+	-sdk iphonesimulator \
+	-destination "generic/platform=iOS Simulator" \
+	-derivedDataPath "$SIMULATOR_DERIVED_DATA" \
+	CODE_SIGNING_ALLOWED=NO \
+	build
+
 echo "Validated iOS export: $IPA_PATH"
-echo "HealthKit entitlement, privacy text, and native plugin are present."
+echo "Validated arm64 device archive and arm64 Simulator build."
+echo "HealthKit entitlement, read/update privacy text, native plugin, and Apple frameworks are present."
