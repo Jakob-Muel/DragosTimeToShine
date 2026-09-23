@@ -133,11 +133,16 @@ eligibility requires two distinct dragons, enough Fusion Stars and den space (ca
 not required at the moment). Pairs without a recipe produce the first parent's species.
 Flight progression values come from `data/training/flight.tres`.
 
-## Safe areas
+## Canvas fitting and safe areas
 
-`GameCanvas` converts the platform safe area into the 720-pixel design coordinate system
-and passes the inset to every `GameScreen`. Headers and top resources stay below camera
-cutouts and the Dynamic Island while background art still fills the viewport.
+`GameCanvas` maps the window onto a 720-unit-wide logical canvas. On phones it fits by
+width and the logical height follows the aspect ratio (at least 1280 units). When the
+window is relatively wider than a 16:9 phone (tablets, foldables, desktop browsers), it
+fits by height instead: the canvas is 720 x 1280, centered, with plain side margins, and
+decorations are clipped at its edges. Screens therefore only ever lay out for 720 x 1280
+and taller. `GameCanvas` also converts the platform safe area into logical units and passes
+the inset to every `GameScreen`, so headers stay below camera cutouts and the Dynamic
+Island.
 
 ## Step counting
 

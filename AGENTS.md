@@ -107,6 +107,7 @@ Headless suites:
 | `dragon_presentation` | Dragon presentation data and textures |
 | `save_repository` | Crash-safe saving: checksum, backup, recovery, quarantine |
 | `dev_tools` | Dragon Lab hidden and unreachable in release builds |
+| `canvas_fit` | Phones fit by width; tablets, foldables and desktop fit by height, centered |
 
 Rendering suites (marked `## requires-graphics`, skipped by default):
 `seeded_dragon_render`, `procedural_dragon_views`, `comic_scrolling_render`.
@@ -117,6 +118,12 @@ step and calls `quit()`. The runner picks it up automatically, including in CI. 
 `## requires-graphics` on line 2 if it needs a display. Add `## allow-engine-errors` only
 if the test deliberately triggers `push_error`. Keep suites deterministic and under a
 few seconds; never depend on the player's save or wall-clock time.
+
+**Seeing layouts as an agent:** the Cowork VM has Xvfb and Mesa, so after
+`tools/agent_test.sh` you can render real screenshots of any screen at any window size:
+`tools/agent_capture.sh build/review <scenario> <en|de> 750x1334 1536x2048 1600x900`
+(scenarios: `main`, `starter_egg`, or any `debug_show_screen` name). `build/` is
+gitignored. Check layout changes at phone, tablet and desktop sizes before reporting.
 
 Web export: `godot --headless --path . --export-release "Web PWA" build/web/index.html`.
 Android and iOS: see `docs/MOBILE_PIPELINE.md`.
@@ -142,7 +149,7 @@ scripts/localization.gd Loads localization/strings.json (en, de)
 native/ + ios/plugins/  HealthKit plugin (built) and Health Connect provider source
 assets/art/comic/       Current runtime art (+ source/ SVGs, excluded from export)
 assets/art/*            Older sprite sets kept for legacy/reference
-tools/                  Headless asset generators and screenshot capture scripts
+tools/                  Asset generators, agent_test.sh, agent_capture.sh, capture scripts
 tests/                  SceneTree test scripts (see section 4)
 docs/                   Design and architecture docs (index in section 9)
 ```
@@ -188,9 +195,12 @@ docs/                   Design and architecture docs (index in section 9)
   reusable classes, `StringName` (`&"id"`) for stable IDs.
 - Every player-facing string is a key in `localization/strings.json` and must exist in
   **both** `en` and `de`. Use `Localization.text(key, values)` / `tr_text(...)`.
-- UI is built in code on a 720-unit-wide logical canvas; height follows the device aspect.
+- UI is built in code on a 720-unit-wide logical canvas; height follows the device aspect,
+  with a minimum of 1280 units. Wider windows (tablets, foldables, desktop) are fitted by
+  height and centered with side margins, so layouts only ever need to handle 720 x 1280
+  and taller.
   Respect the safe area (`GameScreen.safe_top_inset`, `safe_top_y()`, provided by `GameCanvas`). Test layouts at 750x1334,
-  1179x2556, 1080x2160 and 1080x2400.
+  1179x2556, 1080x2160 and 1080x2400, plus one tablet size such as 1536x2048.
 - Colors and fonts come from `scripts/ui/ui_tokens.gd`; widgets from `WidgetFactory`.
 - New critical behavior gets an assertion in an existing or new headless test.
 - Keep docs in English (the original requirements report stays German). Update
