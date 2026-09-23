@@ -25,9 +25,10 @@ fi
 mkdir -p "$WORK"
 rsync -a --delete --exclude .git --exclude .godot --exclude build "$SRC/" "$WORK/"
 
-if [[ ! -d "$WORK/.godot/imported" || "${FULL_IMPORT:-0}" == "1" ]]; then
-  echo "Importing assets (first run takes a few minutes)..."
-  timeout 900 "$GODOT" --headless --editor --import --path "$WORK" --log-file /tmp/dragos-import.log >/dev/null 2>&1
-fi
+# Always import: incremental runs take seconds and refresh the class_name cache, which new
+# scripts need. The first run (or FULL_IMPORT=1) imports every asset and takes minutes.
+[[ "${FULL_IMPORT:-0}" == "1" ]] && rm -rf "$WORK/.godot"
+[[ -d "$WORK/.godot/imported" ]] || echo "Importing assets (first run takes a few minutes)..."
+timeout 900 "$GODOT" --headless --editor --import --path "$WORK" --log-file /tmp/dragos-import.log >/dev/null 2>&1
 
 GODOT="$GODOT" PROJECT="$WORK" exec "$SRC/tests/run_tests.sh" "$@"

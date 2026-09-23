@@ -1,6 +1,6 @@
 # Implementation status
 
-Snapshot: 2026-09-22, branch `progressTowards05` (forked from `graphic-redesign`).
+Snapshot: 2026-09-23, `main` plus branch `m0-3-save-safety`.
 Based on reading the source and tests, not on a fresh device run. Update this file whenever
 a feature ships, changes or is removed.
 
@@ -35,12 +35,12 @@ Legend: **Done** works end to end · **Partial** exists with known gaps · **Mis
 | Visual inheritance / genome | Missing | | Child gets a new random appearance seed; no genome snapshot or generator version |
 | Lineage / family tree view | Missing | | Parent IDs and generation are stored |
 | Procedural dragons | Done | `seeded_dragon.gd`, `dragon_views.gd`, `procedural_dragon_textures.gd` | Portrait, flight and top-down views from one seed |
-| Dragon Lab (seed preview) | Done | `dragon_lab_screen.gd` | Developer tool, **visible in the shipping main menu** |
+| Dragon Lab (seed preview) | Done | `dragon_lab_screen.gd` | Developer tool, shown only in debug builds (`BuildInfo.dev_tools_enabled()`) |
 | Localization en/de | Done | `localization/strings.json` | 231 keys each |
 | Settings, language, reset | Done | `settings_screen.gd` | |
-| Save and migration | Partial | `game_state.gd` | Schema 11 with migrations; no atomic write, backup or checksum |
+| Save and migration | Done | `game_state.gd`, `save_repository.gd` | Schema 11 with migrations; temp-file write, backup, SHA-256 check, recovery and quarantine |
 | Responsive layout, safe areas | Done | `game_canvas.gd`, `ui_safe_area_test.gd` | 720-wide logical canvas |
-| CI and PWA deploy | Done | `.github/workflows/deploy-pages.yml`, `tests/run_tests.sh` | All 13 headless suites on every push and PR, fail-fast runner; Pages deploys from `main` |
+| CI and PWA deploy | Done | `.github/workflows/deploy-pages.yml`, `tests/run_tests.sh` | All headless suites on PRs and pushes to `main`, fail-fast runner; Pages deploys from `main` |
 | iOS export | Partial | `tools/export_ios.sh`, `docs/MOBILE_PIPELINE.md` | No TestFlight yet |
 | Android export | Partial | `export_presets.cfg` (Android preset) | Preset exists; no documented device run, no custom Gradle build, no Play test track |
 | Android back button / app lifecycle | Missing | | Back gesture, pause/resume and backgrounding not handled or tested |
@@ -49,27 +49,21 @@ Legend: **Done** works end to end · **Partial** exists with known gaps · **Mis
 
 ## Known issues and tech debt
 
-1. **Dragon Lab button ships to players.** It is always shown in the main menu. Hide it
-   behind `OS.is_debug_build()` or a settings toggle.
-2. **Attributes are cosmetic.** Trained values do not change flight physics or shooter
+1. **Attributes are cosmetic.** Trained values do not change flight physics or shooter
    damage/fire rate yet, so training them has no gameplay effect.
-3. **Unused currency.** `gems` is saved and shown in the main menu but has no use.
-4. **Dead code.** `CollectionService.next_unowned_egg` and generic
+2. **Unused currency.** `gems` is saved and shown in the main menu but has no use.
+3. **Dead code.** `CollectionService.next_unowned_egg` and generic
    `can_enter_training_contest` / `complete_training_contest` are unused. Flight-specific
    wrappers in `GameState` duplicate the generic path.
-5. **Save writes are not atomic.** `save_game()` overwrites the file directly; a crash
-   mid-write can lose the save. No backup or checksum.
-6. **Rendering suites are not in CI.** The three `## requires-graphics` suites need a
-   display (run them on the Mac with `tests/run_tests.sh --graphics`). All 13 headless
+4. **Rendering suites are not in CI.** The three `## requires-graphics` suites need a
+   display (run them on the Mac with `tests/run_tests.sh --graphics`). All 15 headless
    suites pass as of 2026-09-23.
-7. **Fusion species fallback.** Pairs without a recipe produce parent A's species; the
+5. **Fusion species fallback.** Pairs without a recipe produce parent A's species; the
    child's look is a fresh random seed, so inheritance is not visible.
-8. **Routing is a hand-written match block** in `main.gd`; every new screen touches it.
-9. **Unmerged branch.** All work up to 2026-09-22 is committed on `progressTowards05`
-   (forked from `graphic-redesign`); `main` is still at the older pixel-art state.
-10. **Repository size.** `docs/screenshots/` is about 45 MB, `assets/` about 136 MB,
+6. **Routing is a hand-written match block** in `main.gd`; every new screen touches it.
+7. **Repository size.** `docs/screenshots/` is about 45 MB, `assets/` about 136 MB,
     including legacy sprite sets that runtime no longer uses.
-11. **Legacy sprites.** Dragon definitions still reference fixed species sprites and
+8. **Legacy sprites.** Dragon definitions still reference fixed species sprites and
     elemental islands. Runtime draws procedural dragons and the universal island.
 
 ## Mapping to the requirements report

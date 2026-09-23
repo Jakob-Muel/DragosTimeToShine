@@ -30,6 +30,9 @@ var fusion_stars := 0
 var dragons: Array[Dictionary] = []
 var eggs: Array[Dictionary] = []
 var persistence_enabled := true
+var save_repository := SaveRepository.new(SAVE_PATH)
+## Result of the last load: source ("main", "temp", "backup", "none") and recovery info.
+var last_load_report: Dictionary = {}
 
 var catalog := GameCatalog.new()
 var collection := CollectionService.new(catalog)
@@ -121,24 +124,22 @@ func serialize_state() -> Dictionary:
 func save_game() -> void:
 	if not persistence_enabled:
 		return
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if file == null:
-		push_error("Could not save game state.")
-		return
-	file.store_string(JSON.stringify(serialize_state()))
+	var error := save_repository.write(serialize_state())
+	if error != OK:
+		push_error("Could not save game state (error %d). The previous save is kept." % error)
 
 
 func load_game() -> void:
-	if not FileAccess.file_exists(SAVE_PATH):
+	last_load_report = save_repository.read()
+	var payload: Dictionary = last_load_report.get("payload", {})
+	if payload.is_empty():
+		if not String(last_load_report.get("corrupt_path", "")).is_empty():
+			push_warning("Saved game was damaged and no backup was usable; starting fresh.")
 		return
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
-	if file == null:
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	if not parsed is Dictionary:
-		push_warning("Ignoring invalid saved game state.")
-		return
-	load_payload(parsed)
+	load_payload(payload)
+	if bool(last_load_report.get("recovered", false)):
+		push_warning("Saved game restored from %s file." % last_load_report["source"])
+		save_game()
 
 
 func load_payload(payload: Dictionary) -> void:
@@ -863,10 +864,8 @@ func _commit_change() -> void:
 
 func reset_app() -> void:
 	_reset_defaults()
-	if persistence_enabled and FileAccess.file_exists(SAVE_PATH):
-		var save_path := ProjectSettings.globalize_path(SAVE_PATH)
-		var error := DirAccess.remove_absolute(save_path)
-		if error != OK:
+	if persistence_enabled and save_repository.exists():
+		if save_repository.delete_all() != OK:
 			push_error("Could not remove saved game during app reset.")
 	state_changed.emit()
 

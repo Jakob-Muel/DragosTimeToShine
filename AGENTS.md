@@ -84,9 +84,9 @@ windowed game, and never stop an existing Godot process. Test scripts disable pe
 player's save. Assets must be imported first (missing `.godot/imported/...` errors mean
 they were not).
 
-**CI** (`.github/workflows/deploy-pages.yml`) runs every headless suite on every push and
-pull request (step timeouts, results in the job summary), then checks the web export.
-Pages deploys only from `main`.
+**CI** (`.github/workflows/deploy-pages.yml`) runs every headless suite on pull requests and
+on pushes to `main` (step timeouts, results in the job summary), then checks the web
+export. Pages deploys only from `main`. A branch is tested once a PR is open for it.
 
 Headless suites:
 
@@ -105,6 +105,8 @@ Headless suites:
 | `font_coverage` | Nunito covers German/English glyphs |
 | `seeded_dragon` | Deterministic dragon traits |
 | `dragon_presentation` | Dragon presentation data and textures |
+| `save_repository` | Crash-safe saving: checksum, backup, recovery, quarantine |
+| `dev_tools` | Dragon Lab hidden and unreachable in release builds |
 
 Rendering suites (marked `## requires-graphics`, skipped by default):
 `seeded_dragon_render`, `procedural_dragon_views`, `comic_scrolling_render`.
@@ -125,6 +127,8 @@ Android and iOS: see `docs/MOBILE_PIPELINE.md`.
 main.gd / main.tscn     App shell: canvas fitting, route dispatch (match block), debug helpers
 project.godot           Autoloads: Localization, GameState, StepCounter. 720-wide canvas
 scripts/game_state.gd   Save facade + gameplay API (autoload). All persistent mutations go here
+scripts/save_repository.gd  Crash-safe save file I/O (temp + backup + checksum)
+scripts/build_info.gd   Build version and dev-tools switch (Dragon Lab only in debug builds)
 scripts/domain/         Pure rules: care, training, fusion, attributes, catalog, collection
 scripts/data/           Resource classes: DragonDefinition, TrainingCategoryDefinition, FusionRecipe
 data/                   .tres content: dragons/, training/, fusion/
@@ -172,7 +176,11 @@ docs/                   Design and architecture docs (index in section 9)
   test that loads an old-shape payload.
 - Loading must tolerate missing keys, unknown talent IDs and wrong types. Never trust
   parsed JSON directly.
-- Known weakness: writes are not atomic and there is no backup. See `docs/ROADMAP.md`.
+- All file access goes through `SaveRepository` (`scripts/save_repository.gd`): writes go to
+  `.tmp`, the previous save becomes `.bak`, then the temp file is moved into place. Every
+  file ends with a SHA-256 footer. Loading tries main, temp, backup in that order and moves
+  a damaged main file aside as `.corrupt-<time>` instead of deleting it. Never write the
+  save file directly.
 
 ## 8. Conventions
 
@@ -214,7 +222,14 @@ docs/                   Design and architecture docs (index in section 9)
 | `docs/art_prompts.md` | Pixel-art prompt set | Superseded by comic style |
 | `docs/requirements/` | Original report (German) and gap analysis | Vision, not a work order |
 
-## 10. Definition of done for an agent change
+## 10. Reporting to the user
+
+Keep reports compact: what changed and whether tests pass, in a few bullets. Skip
+implementation detail unless asked. End every task with a short **What to check** list:
+the concrete things the user should verify by hand (push, PR/CI, what to try in the game
+or on a device, what the expected result is).
+
+## 11. Definition of done for an agent change
 
 1. Behavior change is covered by a headless test, or you state why it cannot be.
 2. You considered both Android and iOS: touch-only input, layout at the four phone sizes,
