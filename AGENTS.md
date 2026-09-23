@@ -180,6 +180,8 @@ docs/                   Design and architecture docs (index in section 9)
   `docs/STATUS.md` when you ship or remove a feature, and `PRODUCT_DECISIONS.md` when the
   user confirms a decision.
 - Commit messages: conventional style (`feat:`, `fix:`, `docs:`, `chore:`).
+- Agent sandboxes usually cannot `git push` (no access to the user's GitHub login). Commit
+  locally, then remind the user to push, naming the branch and how many commits are waiting.
 - Do not commit regenerated screenshots or `.godot/` unless asked. `docs/screenshots/`
   is already about 45 MB.
 
