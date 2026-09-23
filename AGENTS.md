@@ -222,7 +222,14 @@ docs/                   Design and architecture docs (index in section 9)
 | `docs/art_prompts.md` | Pixel-art prompt set | Superseded by comic style |
 | `docs/requirements/` | Original report (German) and gap analysis | Vision, not a work order |
 
-## 10. Definition of done for an agent change
+## 10. Reporting to the user
+
+Keep reports compact: what changed and whether tests pass, in a few bullets. Skip
+implementation detail unless asked. End every task with a short **What to check** list:
+the concrete things the user should verify by hand (push, PR/CI, what to try in the game
+or on a device, what the expected result is).
+
+## 11. Definition of done for an agent change
 
 1. Behavior change is covered by a headless test, or you state why it cannot be.
 2. You considered both Android and iOS: touch-only input, layout at the four phone sizes,
