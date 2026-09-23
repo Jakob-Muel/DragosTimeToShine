@@ -36,6 +36,7 @@ Goal: a clean, trustworthy base before new features.
 | M0.4 Remove dead code: `next_unowned_egg`, unused contest wrappers, and decide on `gems` (remove or give it a purpose) | `collection_service.gd`, `game_state.gd`, `main_menu_screen.gd` | No unused public API; save migration drops or keeps `gems` explicitly |
 | M0.5 Replace the `main.gd` route match with a registry dictionary (route to scene + param handler) | `main.gd`, `screen_router.gd` | Adding a screen touches one registry entry; routing test passes |
 | M0.7 Android debug build on a real phone: document the steps in `MOBILE_PIPELINE.md`, check layout, safe areas, touch, fonts and performance | `export_presets.cfg`, `docs/MOBILE_PIPELINE.md` | The core loop runs on an Android phone; issues are listed in `STATUS.md` |
+| ~~M0.8 Fit wide windows by height~~ **Done 2026-09-23:** tablets, foldables and desktop browsers no longer cut off the bottom | `game_canvas.gd` | `canvas_fit_test`; screenshots at phone, tablet and desktop sizes |
 | M0.6 Decide on legacy art and screenshots (keep curated subset, move rest out) | `assets/art/*`, `docs/screenshots/` | Repo size reduced; no runtime reference broken (grep `res://` paths) |
 
 ## M1 Data model and save safety

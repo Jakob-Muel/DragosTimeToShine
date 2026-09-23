@@ -39,7 +39,7 @@ Legend: **Done** works end to end · **Partial** exists with known gaps · **Mis
 | Localization en/de | Done | `localization/strings.json` | 231 keys each |
 | Settings, language, reset | Done | `settings_screen.gd` | |
 | Save and migration | Done | `game_state.gd`, `save_repository.gd` | Schema 11 with migrations; temp-file write, backup, SHA-256 check, recovery and quarantine |
-| Responsive layout, safe areas | Done | `game_canvas.gd`, `ui_safe_area_test.gd` | 720-wide logical canvas |
+| Responsive layout, safe areas | Done | `game_canvas.gd`, `canvas_fit_test.gd`, `ui_safe_area_test.gd` | Phones fit by width; tablets, foldables and desktop by height, centered |
 | CI and PWA deploy | Done | `.github/workflows/deploy-pages.yml`, `tests/run_tests.sh` | All headless suites on PRs and pushes to `main`, fail-fast runner; Pages deploys from `main` |
 | iOS export | Partial | `tools/export_ios.sh`, `docs/MOBILE_PIPELINE.md` | No TestFlight yet |
 | Android export | Partial | `export_presets.cfg` (Android preset) | Preset exists; no documented device run, no custom Gradle build, no Play test track |
@@ -56,7 +56,7 @@ Legend: **Done** works end to end · **Partial** exists with known gaps · **Mis
    `can_enter_training_contest` / `complete_training_contest` are unused. Flight-specific
    wrappers in `GameState` duplicate the generic path.
 4. **Rendering suites are not in CI.** The three `## requires-graphics` suites need a
-   display (run them on the Mac with `tests/run_tests.sh --graphics`). All 15 headless
+   display (run them on the Mac with `tests/run_tests.sh --graphics`). All 16 headless
    suites pass as of 2026-09-23.
 5. **Fusion species fallback.** Pairs without a recipe produce parent A's species; the
    child's look is a fresh random seed, so inheritance is not visible.
