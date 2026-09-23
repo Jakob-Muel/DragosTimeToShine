@@ -174,9 +174,11 @@ func _build_actions(y: float) -> void:
 	add_child(contest_button)
 	WidgetFactory.add_button_caption(contest_button, tr_text("CONTEST_CAPTION"))
 
+	# The Dragon Lab is a developer tool; release builds give its space to the shooter.
+	var show_dev_tools := BUILD_INFO.dev_tools_enabled()
 	var shooter_button := WidgetFactory.button(
 		tr_text("NAV_FLAME_RUN"),
-		Rect2(52, y + 256.0, 298, 82),
+		Rect2(52, y + 256.0, 298 if show_dev_tools else 616, 82),
 		Color("#f47a4f"),
 		Color("#a9433c")
 	)
@@ -184,6 +186,8 @@ func _build_actions(y: float) -> void:
 	shooter_button.pressed.connect(navigate.bind("training_session", {"talent_id": "element_power", "return_route": "main"}))
 	add_child(shooter_button)
 
+	if not show_dev_tools:
+		return
 	var dragon_lab_button := WidgetFactory.button(
 		tr_text("NAV_DRAGON_LAB"),
 		Rect2(370, y + 256.0, 298, 82),

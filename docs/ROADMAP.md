@@ -18,11 +18,11 @@ implementation. Prepare options, do not decide alone.
 
 ## Next up (short list)
 
-1. M0.1 Review and merge `progressTowards05` into `main`.
-2. M0.3 Hide the Dragon Lab from release builds.
-3. M0.7 Get an Android debug build running on a real phone.
-4. M1.1 Atomic save with backup.
-5. M1.5 Android Health Connect plugin (egg hatching depends on steps).
+1. M0.7 Get an Android debug build running on a real phone.
+2. M1.5 Android Health Connect plugin (egg hatching depends on steps).
+3. M1.6 App lifecycle: Android back gesture, save on pause, re-query steps on resume.
+4. M0.4 Remove dead code and decide what `gems` are for.
+5. M1.2 Add the `hp` attribute (prepares survivor mode).
 
 ## M0 Housekeeping
 
@@ -30,9 +30,9 @@ Goal: a clean, trustworthy base before new features.
 
 | Task | Files | Acceptance |
 | --- | --- | --- |
-| M0.1 Merge `progressTowards05` into `main` (backlog already committed in logical chunks) | whole repo | CI green on `main`; PWA deploys |
+| ~~M0.1 Merge `progressTowards05` into `main`~~ **Done 2026-09-23** (PR #1) | whole repo | CI green on `main`; PWA deploys |
 | ~~M0.2 Run all headless suites in CI with timeouts~~ **Done 2026-09-23:** `tests/run_tests.sh` (auto-discovery, fail-fast on errors, timeouts), CI on every push/PR | `.github/workflows/deploy-pages.yml`, `tests/run_tests.sh` | Verified: assert, runtime error, engine error, hang, bad exit code and missing marker all fail |
-| M0.3 Show Dragon Lab only when `OS.is_debug_build()` | `main_menu_screen.gd` | Release export has no Dragon Lab button; routing test still passes |
+| ~~M0.3 Show Dragon Lab only in debug builds~~ **Done 2026-09-23** | `build_info.gd`, `main_menu_screen.gd`, `main.gd` | `dev_tools_test`: button hidden and route refused when disabled |
 | M0.4 Remove dead code: `next_unowned_egg`, unused contest wrappers, and decide on `gems` (remove or give it a purpose) | `collection_service.gd`, `game_state.gd`, `main_menu_screen.gd` | No unused public API; save migration drops or keeps `gems` explicitly |
 | M0.5 Replace the `main.gd` route match with a registry dictionary (route to scene + param handler) | `main.gd`, `screen_router.gd` | Adding a screen touches one registry entry; routing test passes |
 | M0.7 Android debug build on a real phone: document the steps in `MOBILE_PIPELINE.md`, check layout, safe areas, touch, fonts and performance | `export_presets.cfg`, `docs/MOBILE_PIPELINE.md` | The core loop runs on an Android phone; issues are listed in `STATUS.md` |
@@ -44,7 +44,7 @@ Goal: saves cannot be lost, and every dragon carries the data future features ne
 
 | Task | Files | Acceptance |
 | --- | --- | --- |
-| M1.1 Atomic save: write to `dragos_save.tmp`, then rename; keep `dragos_save.bak` of the previous good save; on parse failure load the backup | `game_state.gd` (or new `scripts/save_repository.gd`) | Test simulates a corrupt main file and recovers from backup |
+| ~~M1.1 Crash-safe save~~ **Done 2026-09-23:** temp file + rename, `.bak` rotation, SHA-256 footer, recovery order main/temp/backup, damaged files quarantined | `scripts/save_repository.gd`, `game_state.gd` | `save_repository_test`: truncation, edits, crash between renames, stale temp, legacy JSON, GameState recovery |
 | M1.2 Add `hp` attribute (potential + value, same rules as others) with migration | `dragon_attributes.gd`, `game_state.gd`, `attributes_screen.gd`, strings | Old saves gain `hp`; attribute tests cover it |
 | M1.3 Store `generator_version` with every dragon and egg appearance seed | `game_state.gd`, `seeded_dragon.gd` | Changing the generator later cannot change existing dragons |
 | M1.4 Child-friendly stat names in the UI **(needs decision Q-08)** | `strings.json` | Both locales updated; internal IDs unchanged |

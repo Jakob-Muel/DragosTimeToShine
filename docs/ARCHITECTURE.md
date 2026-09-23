@@ -120,7 +120,10 @@ egg is created.
 Loading normalizes every dragon and egg, migrates older schemas (legacy `species`, egg
 `kind`, global care, `flight_xp`, 1,000-step eggs, direct Voltara) and resaves when the
 version was older. The save is written after every mutation through `_commit_change()`.
-Writes are not yet atomic (see `docs/ROADMAP.md` M1.1). Health samples are never stored,
+File access goes through `SaveRepository`: it writes a temp file with a SHA-256 footer,
+keeps the previous save as `.bak`, then moves the temp file into place. Loading tries the
+main file, then the temp file, then the backup; a damaged main file is moved aside as
+`.corrupt-<time>` and a recovered state is written back immediately. Health samples are never stored,
 only the incubation timestamp and aggregate progress. The Settings reset deletes the file
 and restores a fresh starter egg.
 

@@ -1,11 +1,14 @@
 name: Test and deploy
 
-# Tests run on every push and pull request. The web export is checked on every run.
+# Tests and the web export check run on pull requests and on pushes to main (branch pushes
+# without a PR are not built, which avoids running everything twice for an open PR).
 # GitHub Pages deploys only from pushes to main. The PWA is a review channel; the product
 # ships as native Android and iOS apps (docs/PRODUCT_DECISIONS.md D-10).
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
