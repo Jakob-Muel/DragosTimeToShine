@@ -87,6 +87,14 @@ product platform. Consequences:
 
 This overrides the report's "iPhone only" target.
 
+### D-11 Dev mode on and off per device (2026-10-05)
+Developer tools (Dragon Lab, and later other debug screens) must be visible to the developer
+while testing and hidden from beta testers. Debug builds (editor, debug exports) start with
+dev tools on, release builds (TestFlight, store) start with them off. Tapping the version
+label on the main menu 7 times quickly flips dev tools on or off on that device; the choice
+is stored in `user://dev_tools.cfg` and beats the build default. While on, the version label
+reads "v0.1 · DEV". New dev-only UI must check `BuildInfo.dev_tools_enabled()`.
+
 ## Open questions
 
 Record the answer as a new decision when the user settles one.
@@ -107,3 +115,5 @@ Record the answer as a new decision when the user settles one.
   HealthKit (minigame, timer, tasks)?
 - **Q-08 Stat naming for kids.** Keep "attack power / attack speed" labels, or use softer
   names like "Power", "Speed", "Agility" in the UI?
+- **Q-09 Dev mode in store builds.** The tap gesture also ships in App Store / Play builds,
+  where curious kids could find it. Remove or harden it before 1.0?

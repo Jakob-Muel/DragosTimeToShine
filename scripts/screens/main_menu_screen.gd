@@ -47,16 +47,32 @@ func build() -> void:
 	_build_greeting(greeting_y)
 	_build_actions(action_y)
 
+	var version_text := BUILD_INFO.VERSION
+	if BUILD_INFO.dev_tools_enabled():
+		version_text += "  ·  DEV"
 	var version := WidgetFactory.label(
-		BUILD_INFO.VERSION,
+		version_text,
 		17,
 		Color(UiTokens.INK_SOFT, 0.70),
 		HORIZONTAL_ALIGNMENT_CENTER,
 		UiTokens.FONT_BOLD
 	)
-	version.position = Vector2(0, safe_footer_y - 36.0)
-	version.size = Vector2(canvas_size.x, 28)
+	version.name = "VersionLabel"
+	version.position = Vector2(0, safe_footer_y - 44.0)
+	version.size = Vector2(canvas_size.x, 44)
+	# Hidden developer switch: tap the version quickly UNLOCK_TAPS times.
+	version.mouse_filter = Control.MOUSE_FILTER_STOP
+	version.gui_input.connect(_on_version_input)
 	add_child(version)
+
+
+func _on_version_input(event: InputEvent) -> void:
+	# Touch arrives as emulated mouse clicks on phones, so mouse buttons cover both.
+	var click := event as InputEventMouseButton
+	if click == null or not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if BUILD_INFO.register_unlock_tap():
+		navigate("main", {})
 
 
 func _build_top_bar(top_y: float) -> void:
