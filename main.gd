@@ -296,7 +296,7 @@ func _show_flame_shooter() -> void:
 
 func _show_dragon_lab() -> void:
 	if not preload("res://scripts/build_info.gd").dev_tools_enabled():
-		push_warning("Dragon Lab is a developer tool and is disabled in release builds.")
+		push_warning("Dragon Lab is a developer tool and dev tools are turned off.")
 		_show_main_menu()
 		return
 	_show_routed_screen("dragon_lab", DRAGON_LAB_SCREEN)

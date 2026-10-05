@@ -135,7 +135,7 @@ main.gd / main.tscn     App shell: canvas fitting, route dispatch (match block),
 project.godot           Autoloads: Localization, GameState, StepCounter. 720-wide canvas
 scripts/game_state.gd   Save facade + gameplay API (autoload). All persistent mutations go here
 scripts/save_repository.gd  Crash-safe save file I/O (temp + backup + checksum)
-scripts/build_info.gd   Build version and dev-tools switch (Dragon Lab only in debug builds)
+scripts/build_info.gd   Build version and dev-tools switch (debug default on, 7 taps on version flips it)
 scripts/domain/         Pure rules: care, training, fusion, attributes, catalog, collection
 scripts/data/           Resource classes: DragonDefinition, TrainingCategoryDefinition, FusionRecipe
 data/                   .tres content: dragons/, training/, fusion/

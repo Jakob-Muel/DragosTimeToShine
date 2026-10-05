@@ -35,7 +35,7 @@ Legend: **Done** works end to end · **Partial** exists with known gaps · **Mis
 | Visual inheritance / genome | Missing | | Child gets a new random appearance seed; no genome snapshot or generator version |
 | Lineage / family tree view | Missing | | Parent IDs and generation are stored |
 | Procedural dragons | Done | `seeded_dragon.gd`, `dragon_views.gd`, `procedural_dragon_textures.gd` | Portrait, flight and top-down views from one seed |
-| Dragon Lab (seed preview) | Done | `dragon_lab_screen.gd` | Developer tool, shown only in debug builds (`BuildInfo.dev_tools_enabled()`) |
+| Dragon Lab (seed preview) | Done | `dragon_lab_screen.gd` | Developer tool behind `BuildInfo.dev_tools_enabled()`: on in debug builds, off in release; tap the main-menu version 7x to flip it per device (D-11) |
 | Localization en/de | Done | `localization/strings.json` | 231 keys each |
 | Settings, language, reset | Done | `settings_screen.gd` | |
 | Save and migration | Done | `game_state.gd`, `save_repository.gd` | Schema 11 with migrations; temp-file write, backup, SHA-256 check, recovery and quarantine |
